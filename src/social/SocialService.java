@@ -29,13 +29,9 @@ public class SocialService {
         return user;
     }
 
-    public void addNewUser(String username, String password, String[] tags) 
+    public User addNewUser(String username, String password, String[] tags) 
                                             throws NoSuchAlgorithmException, InvalidKeySpecException{
-        users.put(username, new User(username, password, tags));
-    }
-
-    public boolean isUsernameAvailable(String username) {
-        return !users.containsKey(username);
+        return users.putIfAbsent(username, new User(username, password, tags));
     }
 
     public boolean areTagsValid(String[] tags) {

@@ -40,12 +40,13 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
                                 throws RemoteException, InvalidUsername, TooManyTagsException, InvalidTags,
                                         NoSuchAlgorithmException, InvalidKeySpecException {
         if(username == null || password == null || tags == null) throw new NullPointerException();
-        if(!social.isUsernameAvailable(username)) throw new InvalidUsername("This name already exists.");
         
         // tags check
         if(tags.length > 5) throw new TooManyTagsException();
         if(!social.areTagsValid(tags)) throw new InvalidTags();
-        social.addNewUser(username, password, tags);
+        
+        if( social.addNewUser(username, password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
+            throw new InvalidUsername("This name already exists.");
 
         // debug
         System.out.println("DEBUG New User registered: " + username + " " + password + " " + tags);

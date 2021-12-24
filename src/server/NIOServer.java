@@ -5,26 +5,35 @@ import java.nio.channels.*;
 import java.net.*; 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import social.SocialService;
+
 import java.io.IOException;
 
 public class NIOServer {
-    public final int BUF_SIZE = 5;
-    private final byte[] echoedMsgBytes = "Echoed by server: ".getBytes();
-    private final ByteBuffer echoedMsgBB;
-    private final int port;
-    private ConcurrentHashMap<SocketChannel, ChannelData> channelToDataMap;
-
+    private final int workersAmount = 4;
+    private ArrayList<Thread> workers;
     
-    public NIOServer(int port) {
+    private final int port;
+
+    public final int BUF_SIZE = 5;
+    protected ConcurrentHashMap<SocketChannel, ChannelData> channelToDataMap;
+    protected LinkedBlockingQueue<CustomRequest> requestList;
+    private SocialService social;
+
+    public NIOServer(int port, SocialService social) {
         this.port = port;
+        this.social = social;
         this.channelToDataMap = new ConcurrentHashMap<>();
-        // directly allocated buffer : this buffer will live in kernel space (no user space buffer means 
-        // less time to access the buffer. We have no copies in user space)
-        echoedMsgBB = ByteBuffer.allocateDirect( echoedMsgBytes.length ).put( echoedMsgBytes ).flip();
-        echoedMsgBB.mark(); // salva la posizione 0 a cui ritornare (tramite metodo reset()) una volta 
+        this.requestList = new LinkedBlockingQueue<>();
+        this.social = social;
+        this.workers = new ArrayList<>(workersAmount);
     }
 
     public void start(){
+        startWorkers();
+
         try( 
             ServerSocketChannel serverChannel = ServerSocketChannel.open() 
         ){
@@ -38,7 +47,7 @@ public class NIOServer {
                 selector.select();
                 Set<SelectionKey> readyKeys = selector.selectedKeys(); // set of ready channel keys 
                 Iterator <SelectionKey> iterator = readyKeys.iterator();
-    
+                
                 while (iterator.hasNext()) {
                     SelectionKey key = iterator.next();
                     iterator.remove();
@@ -47,20 +56,15 @@ public class NIOServer {
                         if (key.isAcceptable()) { // key channel is ready for being accepted
                             ServerSocketChannel server = (ServerSocketChannel) key.channel();
                             SocketChannel client = server.accept(); // non blocking!
-                            //System.out.println("Accepted connection from " + client);
                             client.configureBlocking(false);
     
                             // register the client SocketChannel to the selector with a
                             // focus on the read operation (we want to read something now) 
-                            registerRead(selector, client);
+                            registerOp(selector, client, SelectionKey.OP_READ, null);
     
-                        }else if (key.isWritable()) { // key channel is ready for being written
-                            SocketChannel client = (SocketChannel) key.channel();
-                            String output = (String) key.attachment();
-                            ByteBuffer answer = ByteBuffer.wrap(output.getBytes());
-                            client.write(answer);
-                            if(!answer.hasRemaining())
-                                registerRead(selector, client); // i want to read something now
+                        }
+                        else if (key.isWritable()) { // key channel is ready for being written
+                            answerToClient(selector, key);
     
                         }else if (key.isReadable()) { // key channel is ready for being read
                             readClientMessage(selector, key);
@@ -74,39 +78,18 @@ public class NIOServer {
             }
         }catch (IOException ex) {
             ex.printStackTrace();
-        }        
+        }      
+        
+        joinWorkers();
     }
-
+    
     /**
-     * Register the interest to the read operation on the selector sel
+     * Read the message sent by the client and update the interest of the channel
      *
-     * @param sel the selector used by the server
-     * @param client_channel client socket channel
-     * @throws IOException
-     */
-    private void registerRead(Selector sel, SocketChannel client_channel) throws IOException{
-        // create the buffer
-        ByteBuffer length = ByteBuffer.allocate(Integer.BYTES);
-        ByteBuffer message = ByteBuffer.allocate(BUF_SIZE);
-        ByteBuffer[] bfs = {length, message};
-        // add the client channel to the selector (OP_READ operation is registered)
-        // and adds bytebuffer array [length, message] as attachment
-        client_channel.register(sel, SelectionKey.OP_READ, bfs);
-    }
-
-    /**
-     * Read the message sent by the client and register the interest to 
-     * the write operation on the selector sel
-     *
-     * @param sel the selector used by the server
      * @param key selection key
      * @throws IOException
      */
     private void readClientMessage(Selector sel, SelectionKey key) throws IOException {
-        /*
-         * accetta una nuova connessione creando un SocketChannel per la comunicazione con
-         * il client che la richiede
-         */
         SocketChannel client_channel = (SocketChannel) key.channel();
         
         ByteBuffer[] bfs = null;
@@ -124,6 +107,9 @@ public class NIOServer {
                                                         + client_channel.getRemoteAddress());
                 key.cancel();
                 client_channel.close();
+                bfs[0].clear();
+                bfs[1].clear();
+                return;
             }
 
             if(bfs[0].hasRemaining()){
@@ -140,19 +126,24 @@ public class NIOServer {
             bfs[1].flip();
             message = new String(bfs[1].array()).trim();
         }
-        catch(ClassCastException ignored){ 
+        catch(ClassCastException ignored){
             bfs2 = (ByteBuffer) key.attachment(); // recupera bytebuffer (attachment)
             // check quit condition
-            if( client_channel.read(bfs2) == -1){
+            int n;
+            if( (n = client_channel.read(bfs2)) == -1){
                 System.out.println("Server: chiusa la connessione con il client " 
                                         + client_channel.getRemoteAddress());
                 key.cancel();
                 client_channel.close();
+                bfs2.clear();
+                return;
             }
-
+            
             thisClientPreviuosData = channelToDataMap.get(client_channel);
             // Invariant: here if channelToDataMap.get(client_channel) != null
-            assert thisClientPreviuosData != null;
+            if(thisClientPreviuosData == null){
+                return;
+            }
 
             payload_length = thisClientPreviuosData.getPayload_length();
             readMsgBytes = bfs2.position(); // number of read message bytes
@@ -185,13 +176,17 @@ public class NIOServer {
             
             System.out.printf("Server: ricevuto tutto:\n%s\n", message);
 
-            // TODO: we want to do things here. We just got a message
+            requestList.add(new CustomRequest(sel, client_channel, message, key));
 
-            /*
-            * aggiunge il canale del client al selector con l'operazione OP_WRITE
-            * e aggiunge il messaggio ricevuto come attachment (aggiungendo la risposta addizionale)
-            */
-            client_channel.register(sel, SelectionKey.OP_WRITE, "OKTUTTOAPPOSTO");
+            // clear buffer
+            if(bfs2 != null)
+                bfs2.clear();
+            if(bfs != null){
+                bfs[0].clear();
+                bfs[1].clear();
+            }
+
+            
         }else{ // we didn't read the whole message yet
             // save the payload length we need somewhere we can reach it after 
             // (Use hash map <SocketChannel, ChannelData>)
@@ -208,8 +203,9 @@ public class NIOServer {
                 cd.setMessage( message );
             }
             channelToDataMap.put(client_channel, cd);
-            System.out.printf("Server: ricevuto \n%s\n", message);
-            client_channel.register(sel, SelectionKey.OP_READ, ByteBuffer.allocate(BUF_SIZE));
+            //System.out.printf("Server: ricevuto \n%s\n", message);
+            registerOp(sel, client_channel,
+                    SelectionKey.OP_READ, ByteBuffer.allocate(BUF_SIZE));
         }
         
     }
@@ -217,21 +213,59 @@ public class NIOServer {
     /**
      * Write the attached buffer to the channel related to key 
      *
-     * @param sel select
      * @param key chiave di selezione
      * @throws IOException
      */
     private void answerToClient(Selector sel, SelectionKey key) throws IOException {
-        SocketChannel c_channel = (SocketChannel) key.channel();
-        String echoAnsw = (String) key.attachment();
-        ByteBuffer bbEchoAnsw = ByteBuffer.wrap(echoAnsw.getBytes());
-        // TODO: metti in un ciclo la write? oppure lascia fare al selector per la scrittura successiva?
-        c_channel.write(bbEchoAnsw);
-        System.out.println("Server: " + echoAnsw + " inviato al client " + c_channel.getRemoteAddress());
-        if (!bbEchoAnsw.hasRemaining()) {
-            bbEchoAnsw.clear();
-            this.registerRead(sel, c_channel);
+        SocketChannel client_channel = (SocketChannel) key.channel();
+        ByteBuffer BBAnswer = (ByteBuffer) key.attachment();
+        client_channel.write(BBAnswer);
+        //System.out.println("Scritto al client");
+        if (!BBAnswer.hasRemaining()) {
+            BBAnswer.clear();
+            registerOp(sel, client_channel, SelectionKey.OP_READ, null);
         }
+    }
+
+
+    /**
+     * Register the interest to the read operation on the selector
+     *
+     * @param selector the selector used by the server
+     * @param client_channel client socket channel
+     * @throws IOException
+     */
+    protected void registerOp(Selector selector, SocketChannel client_channel, 
+                                        int operation, ByteBuffer attached) throws IOException{
+        if(attached == null){ 
+            /** Invariant: here if operation == OP_READ and channelToDataMap.get(client_channel) == null */
+            // create the buffer
+            ByteBuffer length = ByteBuffer.allocate(Integer.BYTES);
+            ByteBuffer message = ByteBuffer.allocate(BUF_SIZE);
+            ByteBuffer[] bfs = {length, message};
+            // add the client channel to the selector (OP_READ operation is registered)
+            // and adds bytebuffer array [length, message] as attachment
+            client_channel.register(selector, operation, bfs);
+        }else{
+            client_channel.register(selector, operation, attached);
+        }
+    }
+
+    private void startWorkers(){
+        for (int i = 0; i < workersAmount; i++) {
+			Thread t = new Thread(new NIOWorker(this, requestList, social));
+			workers.add(t);
+			t.start();
+		}
+    }
+    private void joinWorkers() {
+        for (int i = 0; i < workersAmount; i++){
+			try {
+				workers.get(i).join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			};
+		}
     }
 
 }

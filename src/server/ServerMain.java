@@ -32,7 +32,7 @@ public class ServerMain {
         }
 
         // startTCPService
-        new NIOServer(SERVER_TCP_PORT).start();
+        new NIOServer(SERVER_TCP_PORT, social).start();
         
     }
 
