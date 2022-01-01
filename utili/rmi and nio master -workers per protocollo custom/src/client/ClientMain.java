@@ -3,11 +3,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.rmi.*;
@@ -51,16 +46,9 @@ public class ClientMain {
             System.err.println("Client exception:"+ e.getMessage());
         }
 
-        try {
-            get("http://"+ SERVER_IP +":"+ SERVER_TCP_PORT + "/prova");
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
 
         //TCP
-        /*try ( SocketChannel client = SocketChannel.open(new InetSocketAddress("localhost", SERVER_TCP_PORT)); )
+        try ( SocketChannel client = SocketChannel.open(new InetSocketAddress("localhost", SERVER_TCP_PORT)); )
         {
             BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
@@ -90,10 +78,10 @@ public class ClientMain {
                 client.write(readBuffer);
                 readBuffer.clear();
 
-                if (msg.equals(this.EXIT_CMD)){
+                /*if (msg.equals(this.EXIT_CMD)){
                     this.exit = true;
                     continue;
-                }
+                }*/
                 ByteBuffer reply = ByteBuffer.allocate(BUF_SIZE);
                 client.read(reply);
                 reply.flip();
@@ -105,20 +93,7 @@ public class ClientMain {
             System.out.println("Client: chiusura");
         }catch (IOException e) {
             e.printStackTrace();
-        }*/
+        }
     }
 
-
-    public static void get(String uri) throws Exception {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-              .uri(URI.create(uri))
-              .GET()
-              .build();
-    
-        HttpResponse<String> response =
-              client.send(request, BodyHandlers.ofString());
-    
-        System.out.println(response.body());
-    }
 }
