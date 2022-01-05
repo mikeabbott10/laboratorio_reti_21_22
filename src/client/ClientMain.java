@@ -1,15 +1,10 @@
 package client;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.rmi.*;
 import java.rmi.server.*;
 
@@ -37,7 +32,7 @@ public class ClientMain {
             ClientNotifyEventInterface stub = 
                 (ClientNotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
 
-            server.register("nomeUtente", "passwordUtente", new String[]{"primoTag","secondoTag"});
+            server.register("nomeUtente", "passwordUtente", new String[]{"arta","cinema"});
             server.registerForCallback(stub, "nomeUtente", "passwordUtente");
             
             // attende gli eventi generati dal server per
@@ -52,7 +47,7 @@ public class ClientMain {
         }
 
         try {
-            get("http://"+ SERVER_IP +":"+ SERVER_TCP_PORT + "/prova");
+            get("http://"+ SERVER_IP +":"+ SERVER_TCP_PORT + "/login/mario/pwdok/action/idDellAzione");
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

@@ -7,31 +7,36 @@ import java.util.concurrent.ConcurrentHashMap;
  * Invariant: ( rewinnedPost!=null && isEmpty(upvotes) && isEmpty(downvotes) ) == true
  */
 public class Post {
+    private final long id;
     private String title;
-    private String text;
+    private String content;
     private User author;
-    private final Post rewinnedPost;
+    //private final Post rewinnedPost;
     private final Date date;
-    private Set<User> upvotes;
-    private Set<User> downvotes;
+    /*private Set<User> upvotes;
+    private Set<User> downvotes;*/
 
-    public Post(String title, String text, User author) {
+    public Post(long id, String title, String content, User author) {
+        this.id = id;
         this.title = title;
-        this.text = text;
+        this.content = content;
         this.author = author;
-        this.rewinnedPost = null;
+        //this.rewinnedPost = null;
         this.date = Calendar.getInstance().getTime();
-        this.upvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
+        /*this.upvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
         this.downvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
+        */
     }
-    public Post(String title, String text, User author, Post rewinnedPost) {
+    /*public Post(long id, String title, String content, User author, Post rewinnedPost) {
+        this.id = id;
         this.title = title;
-        this.text = text;
+        this.content = content;
         this.author = author;
         this.rewinnedPost = rewinnedPost;
         this.date = Calendar.getInstance().getTime();
         this.upvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
         this.downvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
-    }
+        
+    }*/
 
 }

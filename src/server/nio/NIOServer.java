@@ -4,39 +4,31 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.net.*; 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import database.Database;
 import exceptions.EndOfStreamException;
+import server.http.handler.HttpRequestHandler;
+import server.http.response.HttpResponse;
+import server.http.response.HttpResponseBuilder;
 import server.util.Logger;
-import social.SocialService;
 
 import java.io.IOException;
 
 public class NIOServer {
     private static final Logger LOGGER = new Logger(NIOServer.class.getName());
-
-    private final int workersAmount = 4;
-    private ArrayList<Thread> workers;
     
     private final int port;
 
     public final int BUF_SIZE = 5;
-    protected ConcurrentHashMap<SocketChannel, ChannelData> channelToDataMap;
-    protected LinkedBlockingQueue<CustomRequest> requestList;
-    private SocialService social;
+    private Database db;
 
-    public NIOServer(int port, SocialService social) {
+    public NIOServer(int port, Database db) {
         this.port = port;
-        this.social = social;
-        this.channelToDataMap = new ConcurrentHashMap<>();
-        this.requestList = new LinkedBlockingQueue<>();
-        this.workers = new ArrayList<>(workersAmount);
+        this.db = db;
     }
 
     public void start(){
-        startWorkers();
-
         try( 
             ServerSocketChannel serverChannel = ServerSocketChannel.open() 
         ){
@@ -80,9 +72,7 @@ public class NIOServer {
             }
         }catch (IOException ex) {
             ex.printStackTrace();
-        }      
-        
-        joinWorkers();
+        }
     }
     
     /**
@@ -95,7 +85,20 @@ public class NIOServer {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         try{
             String raw = new RawRequestReader().readRaw(clientChannel);
-            requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+            HttpResponse response = 
+                new HttpRequestHandler().handleRequest(this.db, 
+                        new CustomRequest(sel, clientChannel, raw, key));
+            if(response == null) return;
+
+            // answer to client
+            HttpResponseBuilder rb = new HttpResponseBuilder();
+            ByteBuffer headers = ByteBuffer.wrap(rb.buildHeaders(clientChannel, response));
+            ByteBuffer content = rb.buildContent(clientChannel, response);
+            //headers.flip(); content.flip(); flip errati qua perchè ByteBuffer.wrap lascia position a 0
+            ByteBuffer bb = ByteBuffer.allocate(headers.capacity() + content.capacity());
+            bb.put(headers).put(content); 
+            bb.flip();
+            registerOp(sel, clientChannel, SelectionKey.OP_WRITE, bb);
         }catch(EndOfStreamException e){
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
@@ -153,21 +156,5 @@ public class NIOServer {
         //LOGGER.info("chiuso");
     }
 
-    private void startWorkers(){
-        for (int i = 0; i < workersAmount; i++) {
-			Thread t = new Thread(new NIOWorker(this, requestList, social));
-			workers.add(t);
-			t.start();
-		}
-    }
-    private void joinWorkers() {
-        for (int i = 0; i < workersAmount; i++){
-			try {
-				workers.get(i).join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			};
-		}
-    }
 
 }

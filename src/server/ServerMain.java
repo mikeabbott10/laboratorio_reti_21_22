@@ -1,5 +1,5 @@
 package server;
-// RMI
+
 import java.rmi.RemoteException;
 import java.rmi.registry.*;
 import java.net.InetAddress;
@@ -7,6 +7,8 @@ import java.net.MalformedURLException;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
 
+import database.Database;
+import database.DatabaseImpl;
 import server.nio.NIOServer;
 import server.rmi.ServerRMIImplementation;
 import server.rmi.ServerRMIInterface;
@@ -24,10 +26,13 @@ public class ServerMain {
     public final static int TCP_SERVICE_PORT = 6789;
     public static InetAddress localhostAddr;
     
-    public static SocialService social;
+    public static Database db;
+    private static SocialService social;
     
     public static void main(String[] args) throws Exception {
+        // TODO: server state from json files
         social = new SocialService();
+        db = new DatabaseImpl(social);
         try{
             startRMIService();
         }catch (MalformedURLException | RemoteException e) {
@@ -35,12 +40,12 @@ public class ServerMain {
         }
 
         // startTCPService
-        new NIOServer(NIO_SERVER_PORT, social).start();
+        new NIOServer(NIO_SERVER_PORT, db).start();
         
     }
 
     private static void startRMIService() throws RemoteException, MalformedURLException{
-        ServerRMIImplementation serverService = new ServerRMIImplementation(social);
+        ServerRMIImplementation serverService = new ServerRMIImplementation(db);
         // Esportazione dell'Oggetto 
         ServerRMIInterface stub = 
             (ServerRMIInterface) UnicastRemoteObject.exportObject(serverService, 0);

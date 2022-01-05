@@ -9,11 +9,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import client.ClientNotifyEventInterface;
+import database.Database;
 import exceptions.*;
 import social.*;
 
 public class ServerRMIImplementation extends RemoteServer implements ServerRMIInterface {
-    private SocialService social;
+    private final Database db;
 
     /**
      * Active users at the moment. Note that we allow users 
@@ -29,48 +30,48 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
 
 
     // Constructors ---------------------------------------------------------------------------------------
-    public ServerRMIImplementation (SocialService social) {
+    public ServerRMIImplementation (Database db) {
         super();
-        this.social = social;
+        this.db = db;
         this.notifyEnabledClientInterfaces = new ConcurrentHashMap<>();
         this.reverseNotifyEnabledClientInterfaces = new ConcurrentHashMap<>();
     }
 
-    @Override public void register(String username, String password, String[] tags) 
-                                throws RemoteException, InvalidUsername, TooManyTagsException, InvalidTags,
-                                        NoSuchAlgorithmException, InvalidKeySpecException {
+
+    @Override 
+    public void register(String username, String password, String[] tags) 
+                                throws RemoteException, InvalidUsername, 
+                                        TooManyTagsException, InvalidTags, DatabaseException{
         if(username == null || password == null || tags == null) throw new NullPointerException();
         
         // tags check
         if(tags.length > 5) throw new TooManyTagsException();
-        if(!social.areTagsValid(tags)) throw new InvalidTags();
+        if(!db.areTagsValid(tags)) throw new InvalidTags();
         
-        if( social.addNewUser(username, password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
+        if( db.addNewUser(username, password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
             throw new InvalidUsername("This name already exists.");
 
         // debug
         System.out.println("DEBUG New User registered: " + username + " " + password + " " + tags);
-
     }
 
     /** 
      * Add a new client to the logged users list. Client interface and user are linked together, we don't
      * allow to add, to this list, clients without an identity in the social network.
-     * @throws InvalidUsername thrown from SocialService function getAllowedUser
-     * @throws UsernameAndPasswordMatchException thrown from SocialService function getAllowedUser
+     * @throws InvalidUsername thrown from db.getAllowedUser
+     * @throws UsernameAndPasswordMatchException 
      * @throws InvalidKeySpecException
      * @throws NoSuchAlgorithmException
      * @throws AlreadyConnectedException
+     * @throws LoginException
      */
     @Override 
     public synchronized void registerForCallback(ClientNotifyEventInterface clientInterface, 
-                                            String username, String password) 
+                                                    String username, String password) 
                                         throws RemoteException, AlreadyConnectedException,
-                                            InvalidUsername, UsernameAndPasswordMatchException,
-                                            NoSuchAlgorithmException, InvalidKeySpecException{
-        if(username == null || password == null) throw new NullPointerException();
+                                                LoginException, DatabaseException{
+        User user = getAllowedUser(username, password); // throws LoginException, DatabaseException
 
-        User user = social.getAllowedUser(username, password);
         // user allowed
         if(!notifyEnabledClientInterfaces.containsKey(user)) {
             // add new (concurrent) set in notifyEnabledClientInterfaces map
@@ -87,6 +88,15 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         // add new user in reverseNotifyEnabledClientInterfaces map
         reverseNotifyEnabledClientInterfaces.put(clientInterface, user); 
     }
+
+    private User getAllowedUser(String username, String password) 
+                                        throws DatabaseException, LoginException {
+        if(username == null || password == null) throw new NullPointerException();
+        User user = db.getAllowedUser(username, password);
+        if(user == null) throw new LoginException();
+        return user;
+    }
+
 
     /* rimuovi registrazione per callback */
     @Override 
