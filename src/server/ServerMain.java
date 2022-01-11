@@ -17,7 +17,7 @@ import social.SocialService;
 public class ServerMain {
     // rmi
     private static final int SERVER_RMI_PORT = 25258;
-    private static final int NIO_SERVER_PORT = 25268;
+    private static final int HTTP_SERVER_PORT = 8080;
     private static final String SERVER_IP = "localhost";
     private static final String serverUrl = "rmi://"+ SERVER_IP +":" + SERVER_RMI_PORT;
     private static final String rmiServiceName = "/winsomeservice";
@@ -28,20 +28,44 @@ public class ServerMain {
     
     public static Database db;
     private static SocialService social;
+
+    private static NIOServer nio;
+    public static boolean quit;
     
     public static void main(String[] args) throws Exception {
+        quit = false;
         // TODO: server state from json files
         social = new SocialService();
         db = new DatabaseImpl(social);
+
+        // termination handling
+        Runtime.getRuntime().addShutdownHook(new Thread(signalHandler(Thread.currentThread())));
+
+        //rmi
         try{
             startRMIService();
         }catch (MalformedURLException | RemoteException e) {
             System.out.println("Communication error " + e.toString());
         }
 
-        // startTCPService
-        new NIOServer(NIO_SERVER_PORT, db).start();
+        // nio, http server
+        nio = new NIOServer(HTTP_SERVER_PORT, db);
+        nio.start();
         
+    }
+
+    private static Runnable signalHandler(Thread currentThread) {
+        return () -> {
+            //System.out.println("Termination signal occurred");
+            quit = true;
+            if(nio.getSelector() != null) 
+                nio.getSelector().wakeup();
+            try{
+                currentThread.join();
+            }catch(InterruptedException e){
+                e.printStackTrace();
+            }
+        };
     }
 
     private static void startRMIService() throws RemoteException, MalformedURLException{

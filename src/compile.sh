@@ -1,5 +1,3 @@
 #!/bin/bash
 
-javac ./*/*.java
-javac ./*/*/*.java
-javac ./*/*/*/*.java
+javac -cp "../lib/*:." ./*/*.java ./*/*/*.java ./*/*/*/*.java

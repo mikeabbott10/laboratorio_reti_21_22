@@ -1,4 +1,5 @@
 package server.rmi;
+
 import java.rmi.RemoteException;
 import java.rmi.server.RemoteServer;
 import java.security.NoSuchAlgorithmException;
@@ -46,7 +47,6 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         
         // tags check
         if(tags.length > 5) throw new TooManyTagsException();
-        if(!db.areTagsValid(tags)) throw new InvalidTags();
         
         if( db.addNewUser(username, password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
             throw new InvalidUsername("This name already exists.");

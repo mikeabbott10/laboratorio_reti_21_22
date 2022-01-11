@@ -3,40 +3,51 @@ package social;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.Data;
+
 /**
  * Invariant: ( rewinnedPost!=null && isEmpty(upvotes) && isEmpty(downvotes) ) == true
  */
-public class Post {
+public @Data class Post implements Comparable<Post> {
     private final long id;
     private String title;
     private String content;
-    private User author;
-    //private final Post rewinnedPost;
+    private String author;
     private final Date date;
-    /*private Set<User> upvotes;
-    private Set<User> downvotes;*/
+    private Set<String> upvotes;
+    private Set<String> downvotes;
+    private Map<String, HashSet<String>> comments;
+    private Set<String> rewinnedBy;
 
-    public Post(long id, String title, String content, User author) {
+    public Post(long id, String title, String content, String author) {
         this.id = id;
         this.title = title;
         this.content = content;
         this.author = author;
-        //this.rewinnedPost = null;
+        this.comments = new HashMap<>();
+        this.rewinnedBy = ConcurrentHashMap.newKeySet();
         this.date = Calendar.getInstance().getTime();
-        /*this.upvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
-        this.downvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
-        */
-    }
-    /*public Post(long id, String title, String content, User author, Post rewinnedPost) {
-        this.id = id;
-        this.title = title;
-        this.content = content;
-        this.author = author;
-        this.rewinnedPost = rewinnedPost;
-        this.date = Calendar.getInstance().getTime();
-        this.upvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
-        this.downvotes = ConcurrentHashMap.newKeySet(); // Concurrent set of Post instances;
+        this.upvotes = ConcurrentHashMap.newKeySet();
+        this.downvotes = ConcurrentHashMap.newKeySet();
         
-    }*/
+    }
+
+    public int compareTo(Post p) {
+        return this.id - p.getId() > 0 ? 1 : -1;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Post))
+            return false;
+        if (((Post) o).getId() == this.id)
+            return true;
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(this.id);
+    }
 
 }

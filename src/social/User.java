@@ -5,64 +5,23 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class User implements java.io.Serializable, Comparable<User>{
+import com.fasterxml.jackson.annotation.JsonFilter;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import social.password.Password;
+
+@NoArgsConstructor
+@JsonFilter("userPasswordFilter") // ignoring the password field if serialize with this filter name
+public @Data class User implements java.io.Serializable, Comparable<User>{
     private String username; // username is the User ID
     private Password password;
-    private Set<Long> posts;
-    private final String[] tags; // unmodifiable
+    private Set<Integer> posts;
+    private String[] tags; // unmodifiable
     private HashSet<String> followers; // users who follow this
     private HashSet<String> following; // users this follows
     private double wallet;
-
-
-    // Getters n setters ---------------------------------------------------------------------------------
-    public String getUsername() {
-        return username;
-    }
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public Password getPassword() {
-        return password;
-    }
-    public void setPassword(Password password) {
-        this.password = password;
-    }
-
-    public String[] getTags() {
-        return tags;
-    }
-
-    public Set<Long> getPosts() {
-        return posts;
-    }
-    public void setPosts(Set<Long> posts) {
-        this.posts = posts;
-    }
     
-    public HashSet<String> getFollowers() {
-        return followers;
-    }
-    public void setFollowers(HashSet<String> followers) {
-        this.followers = followers;
-    }
-
-    public HashSet<String> getFollowing() {
-        return following;
-    }
-    public void setFollowing(HashSet<String> following) {
-        this.following = following;
-    }
-
-    public double getWallet() {
-        return wallet;
-    }
-    public void setWallet(double wallet) {
-        this.wallet = wallet;
-    }
-
-    // Constructors ---------------------------------------------------------------------------------------
     public User(SocialService social, String username, String password, String[] tags) 
                         throws NoSuchAlgorithmException, InvalidKeySpecException{
         this.username = username.trim();
@@ -76,10 +35,13 @@ public class User implements java.io.Serializable, Comparable<User>{
         this.posts = new HashSet<>();
         this.followers = new HashSet<>();
         this.following = new HashSet<>();
-        this.setWallet(0);
+        this.wallet = 0;
 
     }
 
+    public boolean addPost(int postId) {
+        return this.posts.add(postId);
+    }
 
     @Override 
     public boolean equals(Object u2){

@@ -1,5 +1,11 @@
 package server.http.response;
 
+import java.util.HashMap;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+
+import server.util.JacksonUtil;
 import server.util.Constants.HttpStatus;
 
 /**
@@ -7,22 +13,36 @@ import server.util.Constants.HttpStatus;
  */
 public final class HttpResponseFactory {
 
-    public HttpResponse buildBadRequest(String msg) {
-        return buildImmediateResponse(HttpStatus.BAD_REQUEST, msg);
+    public HttpResponse buildBadRequest(String msg) throws JsonMappingException, JsonProcessingException {
+        String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, String>() {{
+            put("message", msg);
+        }});
+        return buildImmediateResponse(HttpStatus.BAD_REQUEST, responseMessage);
     }
 
-    public HttpResponse buildRequestTimeout() {
-        return buildImmediateResponse(HttpStatus.REQUEST_TIMEOUT,
-            "Session timeout exceeded");
+    public HttpResponse buildRequestTimeout() throws JsonMappingException, JsonProcessingException {
+        String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, String>() {{
+            put("message", "Session timeout exceeded");
+        }});
+        return buildImmediateResponse(HttpStatus.REQUEST_TIMEOUT, responseMessage);
     }
 
-    public HttpResponse buildTooManyRequests() {
-        return buildImmediateResponse(HttpStatus.TOO_MANY_REQUESTS,
-            "Connections number exceeded the limit");
+    public HttpResponse buildNotFound(String msg) throws JsonMappingException, JsonProcessingException {
+        String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, String>() {{
+            put("message", msg);
+        }});
+        return buildImmediateResponse(HttpStatus.NOT_FOUND, responseMessage);
     }
 
-    public HttpResponse buildNotFound(String msg) {
-        return buildImmediateResponse(HttpStatus.NOT_FOUND, msg);
+    public Object buildForbiddenResponse(String msg) throws JsonMappingException, JsonProcessingException {
+        String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, String>() {{
+            put("message", msg);
+        }});
+        return buildImmediateResponse(HttpStatus.FORBIDDEN, responseMessage);
+    }
+
+    public HttpResponse buildSuccess(String msg){
+        return buildImmediateResponse(HttpStatus.SUCCESS, msg);
     }
 
     private HttpResponse buildImmediateResponse(HttpStatus status, String msg) {

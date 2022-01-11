@@ -2,10 +2,6 @@ package server.http.response;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,10 +12,8 @@ import server.util.Logger;
  */
 public final class HttpResponseBuilder {
     private static final Logger LOGGER = new Logger(HttpResponseBuilder.class.getName());
-    private final Charset charset = Charset.forName("UTF-8");
-    private final CharsetEncoder encoder = charset.newEncoder();
 
-    public byte[] buildHeaders(WritableByteChannel channel, HttpResponse response) throws IOException {
+    public byte[] buildHeaders(HttpResponse response) throws IOException {
         if (response.isWroteHeaders()) {
             return null;
         }
@@ -42,7 +36,7 @@ public final class HttpResponseBuilder {
         return sb.toString().getBytes();
     }
 
-    public ByteBuffer buildContent(WritableByteChannel channel, HttpResponse response){
+    public ByteBuffer buildContent(HttpResponse response){
         if (!response.hasPendingContent()) {
             return null;
         }

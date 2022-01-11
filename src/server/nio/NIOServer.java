@@ -4,10 +4,11 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.net.*; 
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import database.Database;
+import exceptions.DatabaseException;
 import exceptions.EndOfStreamException;
+import server.ServerMain;
 import server.http.handler.HttpRequestHandler;
 import server.http.response.HttpResponse;
 import server.http.response.HttpResponseBuilder;
@@ -19,9 +20,14 @@ public class NIOServer {
     private static final Logger LOGGER = new Logger(NIOServer.class.getName());
     
     private final int port;
-
     public final int BUF_SIZE = 5;
+
+    private Selector selector;
     private Database db;
+
+    public Selector getSelector() {
+        return selector;
+    }
 
     public NIOServer(int port, Database db) {
         this.port = port;
@@ -34,12 +40,13 @@ public class NIOServer {
         ){
             serverChannel.socket().bind( new InetSocketAddress(port) );
             serverChannel.configureBlocking(false); // channel in non blocking mode
-            Selector selector = Selector.open();
+            selector = Selector.open();
             // add the server channel to the selector (OP_ACCEPT operation is registered)
             serverChannel.register(selector, SelectionKey.OP_ACCEPT); 
 
-            while (true) {
-                selector.select();
+            while (!ServerMain.quit) {
+                if( selector.select() == 0 )
+                    continue;
                 Set<SelectionKey> readyKeys = selector.selectedKeys(); // set of ready channel keys 
                 Iterator <SelectionKey> iterator = readyKeys.iterator();
                 
@@ -85,6 +92,7 @@ public class NIOServer {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         try{
             String raw = new RawRequestReader().readRaw(clientChannel);
+            LOGGER.info("Raw req: \n"+ raw);
             HttpResponse response = 
                 new HttpRequestHandler().handleRequest(this.db, 
                         new CustomRequest(sel, clientChannel, raw, key));
@@ -92,8 +100,8 @@ public class NIOServer {
 
             // answer to client
             HttpResponseBuilder rb = new HttpResponseBuilder();
-            ByteBuffer headers = ByteBuffer.wrap(rb.buildHeaders(clientChannel, response));
-            ByteBuffer content = rb.buildContent(clientChannel, response);
+            ByteBuffer headers = ByteBuffer.wrap(rb.buildHeaders(response));
+            ByteBuffer content = rb.buildContent(response);
             //headers.flip(); content.flip(); flip errati qua perchè ByteBuffer.wrap lascia position a 0
             ByteBuffer bb = ByteBuffer.allocate(headers.capacity() + content.capacity());
             bb.put(headers).put(content); 
@@ -102,6 +110,10 @@ public class NIOServer {
         }catch(EndOfStreamException e){
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
+            e.printStackTrace();
+            LOGGER.warn(e.getMessage());
+        } catch (DatabaseException e) {
+            // GRAVE
             LOGGER.warn(e.getMessage());
         }
 

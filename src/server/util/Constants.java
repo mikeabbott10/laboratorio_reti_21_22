@@ -30,6 +30,7 @@ public interface Constants {
 
         SUCCESS(200, "OK"),
         BAD_REQUEST(400, "Bad Request"),
+        FORBIDDEN(403, "Forbidden"),
         REQUEST_TIMEOUT(408, "Request Timeout"),
         TOO_MANY_REQUESTS(429, "Too Many Requests"),
         NOT_FOUND(404, "Not Found");

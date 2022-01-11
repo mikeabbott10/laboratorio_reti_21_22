@@ -2,7 +2,9 @@ package database;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Vector;
 
 import exceptions.DatabaseException;
 import social.*;
@@ -18,7 +20,6 @@ public class DatabaseImpl implements Database{
         this.social= social;
     }
 
-    // DB BACKEND -----------------------------------------------------------------------
     //#region Backend
     /**
      * query simulation:
@@ -74,31 +75,108 @@ public class DatabaseImpl implements Database{
 
     /**
      * query simulation:
-     *      SELECT * FROM tags
-     * @return tags in the db
+     *      DELETE FROM posts P WHERE P.id=postID;
+     * @param user the author of the post
+     * @param postID the post id
+     * @return true if the post is removed
      */
     @Override
-    public Set<String> getTags() {
-        return social.getTags();
+    public boolean removePost(User user, int postID){
+        if( user.getPosts().remove(postID) == false )
+            return false; // postID is not a post from user
+        Post p = social.getPosts().remove(postID);
+        if( p != null ){
+            p.getRewinnedBy().forEach((String username) -> {
+                social.getUsers().get(username).getPosts().remove(postID);
+            });
+            return true;
+        }
+        assert true == false; // never here
+        return false; // postID is not a post from user
     }
+
+    /**
+     * query simulation:
+     *      INSERT INTO posts (Title, Content, Author) VALUES (title, content, author);
+     * @param title
+     * @param content
+     * @param author the username of the author
+     * @throws DatabaseException
+     */
+    @Override
+    public int createPost(String title, String content, String author) throws DatabaseException{
+        int postId = social.postIdCounter++;
+        Post post = new Post(postId, title, content, author);
+        if( social.getUsers().get(author).addPost(postId) == false || 
+                social.getPosts().put(postId, post) != null )
+            throw new DatabaseException();
+        return postId;
+    }
+
+    /**
+     * query simulation:
+     *      SELECT * FROM posts P WHERE P.id=postID
+     */
+    @Override
+    public Post getPost(int postID) {
+        return social.getPosts().get(postID);
+    }
+
+    /**
+     * query simulation:
+     *      SELECT * FROM posts P WHERE P.author=username
+     */
+    @Override
+    public Post[] getPostsFromUsername(String username) {
+        Vector<Post> posts = new Vector<>();
+        User u = social.getUsers().get(username);
+        if(u==null)
+            return null;
+        try{
+            for (int postID : u.getPosts()) {
+                posts.add( social.getPosts().get(postID) );
+            };
+        }catch(Exception e){
+            return null;
+        }
+        return (Post[]) posts.toArray();
+    }
+
+    /**
+     * query simulation:
+     *      SELECT * FROM users U WHERE <U.tag contains string>
+     */
+    @Override
+    public HashMap<String, User> getUsersFromTagname(String tagname) {
+        HashMap<String, User> users = new HashMap<>();
+        social.getUsers().forEach((username, user) -> {
+            for (String tag : user.getTags()) {
+                if(tag.equals(tagname) ){
+                    users.put(username, user);
+                    break;
+                }
+            }
+        });
+
+        return users;
+    }
+
+    @Override
+    public void addComment(String postId, String comment, String author){
+        
+    }
+
+    @Override
+    public void rewinPost(int postId, String author) {
+        
+    }
+
+
     //#endregion
 
 
-    // MIDDLEWARE server / db -------------------------------------------------------------
     //#region middleware
-    /**
-     * Say if tags are allowed
-     * @param tags
-     * @return true if tags are allowed
-     */
-    @Override
-    public boolean areTagsValid(String[] tags) {
-        for (String tag : tags) {
-            if( ! social.getTags().contains(tag) )
-                return false;
-        }
-        return true;
-    }
+    
     //#endregion
     
 }

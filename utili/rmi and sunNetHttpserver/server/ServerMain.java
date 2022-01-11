@@ -1,0 +1,65 @@
+package server;
+
+import java.rmi.RemoteException;
+import java.rmi.registry.*;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.rmi.*;
+import java.rmi.server.UnicastRemoteObject;
+
+import database.Database;
+import database.DatabaseImpl;
+import server.http.HttpServerImpl;
+import server.http.handler.PostContextHandler;
+import server.http.handler.UserContextHandler;
+import server.rmi.ServerRMIImplementation;
+import server.rmi.ServerRMIInterface;
+import social.SocialService;
+
+public class ServerMain {
+    // rmi
+    private static final int SERVER_RMI_PORT = 25258;
+    private static final String SERVER_IP = "localhost";
+    private static final String serverUrl = "rmi://"+ SERVER_IP +":" + SERVER_RMI_PORT;
+    private static final String rmiServiceName = "/winsomeservice";
+
+    //tcp
+    private static final int HTTP_SERVER_PORT = 8080;
+    public static InetAddress localhostAddr;
+    
+    public static Database db;
+    private static SocialService social;
+    
+    public static void main(String[] args) throws Exception {
+        // TODO: server state from json files
+        social = new SocialService(); // change this if not first boot ever
+        db = new DatabaseImpl(social);
+
+        try{
+            startRMIService();
+        }catch (MalformedURLException | RemoteException e) {
+            System.out.println("Communication error " + e.toString());
+        }
+
+        // startHTTPServer
+        HttpServerImpl http_server = new HttpServerImpl(HTTP_SERVER_PORT);
+        http_server.setNewContext("/user", UserContextHandler::userHandler);
+        http_server.setNewContext("/post", PostContextHandler::postHandler);
+        http_server.setNewContext("/posts", PostContextHandler::userPostsHandler);
+        http_server.start();
+        
+    }
+
+    private static void startRMIService() throws RemoteException, MalformedURLException{
+        ServerRMIImplementation serverService = new ServerRMIImplementation(db);
+        // Esportazione dell'Oggetto 
+        ServerRMIInterface stub = 
+            (ServerRMIInterface) UnicastRemoteObject.exportObject(serverService, 0);
+        // Creazione di un registry sulla porta PORT
+        LocateRegistry.createRegistry(SERVER_RMI_PORT);
+        // Pubblicazione dello stub nel registry
+        Naming.rebind(serverUrl + rmiServiceName, stub);
+        //System.out.println("Server ready");
+    }
+
+}

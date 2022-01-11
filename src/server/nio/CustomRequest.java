@@ -25,7 +25,6 @@ public class CustomRequest {
     public Selector getSelector() {
         return selector;
     }
-
     public void setSelector(Selector selector) {
         this.selector = selector;
     }
@@ -33,7 +32,6 @@ public class CustomRequest {
     public SocketChannel getClient_channel() {
         return client_channel;
     }
-
     public void setClient_channel(SocketChannel client_channel) {
         this.client_channel = client_channel;
     }
@@ -41,7 +39,6 @@ public class CustomRequest {
     public String getMessage() {
         return message;
     }
-
     public void setMessage(String message) {
         this.message = message;
     }
@@ -49,7 +46,6 @@ public class CustomRequest {
     public SelectionKey getKey() {
         return key;
     }
-
     public void setKey(SelectionKey key) {
         this.key = key;
     }

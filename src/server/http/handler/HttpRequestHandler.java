@@ -1,93 +1,163 @@
 package server.http.handler;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.StringTokenizer;
 
 import database.Database;
-import server.http.request.*;
+import exceptions.DatabaseException;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import server.http.request.HttpRequest;
 import server.http.response.HttpResponse;
 import server.http.response.HttpResponseFactory;
 import server.nio.CustomRequest;
+import server.util.JacksonUtil;
 import server.util.Logger;
-import server.util.expressRouting.ExpressRoute;
-
-import static server.util.Constants.SUPPORTED_HTTP_METHODS;
-import static server.util.Constants.SUPPORTED_HTTP_VERSION;
+import social.Post;
+import social.User;
 
 public class HttpRequestHandler {
     private static final Logger LOGGER = new Logger(HttpRequestHandler.class.getName());
 
-    String routeDefinition = "/login/:username/:password/action/:actionId";
+    private HttpRequestValidator validator;
 
-    public HttpResponse handleRequest(Database db, CustomRequest req) throws IOException{
-        HttpRequest request = parseRequest(req.getMessage());
+    public HttpRequestHandler() {
+        this.validator = new HttpRequestValidator();
+    }
+
+    public HttpResponse handleRequest(Database db, CustomRequest req) throws IOException, DatabaseException{
+        HttpRequest request = new HttpRequestValidator().parseRequest(req.getMessage());
         //LOGGER.info("Parsed incoming HTTP request: " + request);
 
-        // check request validity
-        HttpResponse notValidResponse = validateRequest(request);
-
+        //#region check request validity
+        HttpResponse notValidResponse = validator.validateRequest(request);
         if (notValidResponse != null) {
             LOGGER.warn("Invalid incoming HTTP request: " + 
                             request + ", response: " + notValidResponse);
             return notValidResponse;
         }
+        //#endregion
 
-        // got valid request, do work
-        LOGGER.info("Got a valid request: " + request + "\n");
+        //#region check login validity
+        Object loginValidationResult = validator.validateLogin(db, request);
+        if (loginValidationResult instanceof HttpResponse) {
+            LOGGER.warn("Invalid login: " + 
+                            request + ", response: " + loginValidationResult);
+            return (HttpResponse) loginValidationResult;
+        }
+        //#endregion
+        User user = (User) loginValidationResult;
 
-        LOGGER.info("Parsed path: "+parsePath(request.getPath()));
+        switch(request.getMethod()){
+            case "GET":{
+                Map<String, String> mappedPath = validator.GETPathValidation(request);
+                if(mappedPath == null){
+                    return new HttpResponseFactory().buildBadRequest(
+                            request.getMethod() + " " + request.getPath() + " is not allowed");
+                }
+                
+                switch( request.getPath().split("/")[1] ){
+                    case "user":{
+                        // get user from userID
+                        User userFromUserID = db.getUser( mappedPath.get("userID") );
+                        if(userFromUserID==null)
+                            return new HttpResponseFactory().buildNotFound("The user does not exist.");
+                        //String userFromUserIDString = JacksonUtil.getStringFromObject(userFromUserID);
+                        String responseMessage = JacksonUtil.getStringFromObjectIgnoreField( 
+                            new HashMap<String, User>() {{
+                                put("user", userFromUserID);
+                            }}, 
+                            "password"
+                        );
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }
+                    case "post":{
+                        // get post from postID
+                        int postID = Integer.parseInt( mappedPath.get("postID") );
+                        Post postFromPostID = db.getPost( postID );
+                        if(postFromPostID==null){
+                            return new HttpResponseFactory().buildNotFound("The post does not exist.");
+                        }
+                        String responseMessage = JacksonUtil.getStringFromObject(
+                            new HashMap<String, Post>() {{
+                                put("post", postFromPostID);
+                            }}
+                        );
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }
+                    case "posts":{
+                        // get posts from userID
+                        Post[] postsFromUserID = db.getPostsFromUsername( mappedPath.get("userID") );
+                        if(postsFromUserID==null)
+                            return new HttpResponseFactory().buildNotFound("The user does not exist.");
+                        
+                        String responseMessage = JacksonUtil.getStringFromObject( 
+                            new HashMap<String, Post[]>() {{
+                                put("posts", postsFromUserID);
+                            }}
+                        );
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }
+                    case "users":{
+                        // get users from tagName
+                        HashMap<String, User> usersFromTagname = db.getUsersFromTagname( mappedPath.get("tagName") );
+                        
+                        String responseMessage = JacksonUtil.getStringFromObjectIgnoreField( 
+                            new HashMap<String, HashMap<String, User>>() {{
+                                put("users", usersFromTagname);
+                            }},
+                            "password"
+                        );
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }
+                }
+                
+                break;
+            }
+            case "POST":{
+                // only one action: create post
+                if( !request.getPath().equals(validator.postSetRouteDefinition) )
+                    break;
+                TitleContent postProperties = (TitleContent) JacksonUtil.getObjectFromString(request.getBody(), TitleContent.class);
+                int postID = db.createPost( postProperties.title, postProperties.content, user.getUsername());
+                // post created
+                String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, Integer>() {{
+                    put("postID", postID);
+                }});
+                return new HttpResponseFactory().buildSuccess(responseMessage);
+            }
+            case "PUT":{
+                break;
+            }
+            case "DELETE":{
+                // only one action: remove post
+                Map<String, String> mappedPath = validator.parsePath(request.getPath(), validator.postRouteDefinition);
+                if(mappedPath == null){
+                    return new HttpResponseFactory().buildBadRequest(
+                            request.getMethod() + " " + request.getPath() + " is not allowed");
+                }
+                
+                // remove the post
+                if( db.removePost(user, Integer.parseInt(mappedPath.get("postID"), 10)) ){
+                    String responseMessage = JacksonUtil.getStringFromObject(new HashMap<String, String>() {{
+                        put("message", "Post deleted.");
+                    }});
+                    return new HttpResponseFactory().buildSuccess(responseMessage);
+                }
+                return new HttpResponseFactory().buildNotFound("The post does not exist.");
+            }
+            default:
+                assert true == false; // never here
+        }
 
-        return new HttpResponseFactory().buildBadRequest("0123456789"); // TODO
+        return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
     }
 
-    //#region Path parsing
-    private Map<String, String> parsePath(String path) {
-        ExpressRoute route = new ExpressRoute(routeDefinition);
-        
-        if (route.matches(path)) {
-            return route.getParametersFromPath(path);
-        }
-        return null;
+    @NoArgsConstructor
+    private @Data static class TitleContent{
+        protected String title;
+        protected String content;
     }
-
-    //#region Request parsing
-    private HttpRequest parseRequest(String raw) throws IOException {
-        try {
-            StringTokenizer tokenizer = new StringTokenizer(raw);
-            String method = tokenizer.nextToken().toUpperCase();
-            String path = tokenizer.nextToken();
-            String version = tokenizer.nextToken();
-
-            return new HttpRequest(method, path, version);
-        } catch (Exception e) {
-            throw new IOException("Malformed request", e);
-        }
-    }
-    //#endregion
-
-    //#region Request validation
-    private HttpResponse validateRequest(HttpRequest request) {
-        // validateSupported request (method, etc.)
-        String invalidReason = validateSupported(request);
-        if (invalidReason != null) {
-            return new HttpResponseFactory().buildBadRequest(invalidReason);
-        }
-        return null;
-    }
-
-    private String validateSupported(HttpRequest request) {
-        String method = request.getMethod();
-        if (method == null || !Arrays.asList(SUPPORTED_HTTP_METHODS).contains(method)) {
-            return "Unsupported method";
-        }
-        String version = request.getVersion();
-        if (version == null || !version.equals(SUPPORTED_HTTP_VERSION)) {
-            return "Unsupported HTTP version";
-        }
-        
-        return null;
-    }
-    //#endregion
+    
 }

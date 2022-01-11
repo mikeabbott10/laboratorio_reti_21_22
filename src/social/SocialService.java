@@ -1,19 +1,18 @@
 package social;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.Data;
 
-public class SocialService {
+
+public @Data class SocialService {
     private ConcurrentHashMap<String, User> users; // users in the social network
 
-    private Set<String> tags;
-    private String[] tagsArr = 
-        new String[]{"sport", "cinema", "music", "technology", "programming", "medicine", "art"};
-
-    private int idPostCounter; // i will write this in a json file
+    public int postIdCounter;
     private HashSet<String> activeUsernames;
     private HashMap<String, HashSet<User>> tagsUsers;
     private HashMap<Integer, Post> posts;
@@ -23,81 +22,8 @@ public class SocialService {
     private HashMap<Integer, HashSet<String>> newDownvotes;
     private HashMap<Integer, ArrayList<String>> newComments;
 
-    // Getters n Setters -----------------------------------------------------------------------------
-    //#region GetNSet
-    public ConcurrentHashMap<String, User> getUsers() {
-        return users;
-    }
-    public void setUsers(ConcurrentHashMap<String, User> users) {
-        this.users = users;
-    }
-
-    public Set<String> getTags() {
-        return tags;
-    }
-    public void setTags(Set<String> tags) {
-        this.tags = tags;
-    }
-
-    public String[] getTagsArr() {
-        return tagsArr;
-    }
-    public void setTagsArr(String[] tagsArr) {
-        this.tagsArr = tagsArr;
-    }
-
-    public int getIdPostCounter() {
-        return idPostCounter;
-    }
-    public void setIdPostCounter(int idPostCounter) {
-        this.idPostCounter = idPostCounter;
-    }
-
-    public HashSet<String> getActiveUsernames() {
-        return activeUsernames;
-    }
-    public void setActiveUsernames(HashSet<String> activeUsernames) {
-        this.activeUsernames = activeUsernames;
-    }
-
-    public HashMap<String, HashSet<User>> getTagsUsers() {
-        return tagsUsers;
-    }
-    public void setTagsUsers(HashMap<String, HashSet<User>> tagsUsers) {
-        this.tagsUsers = tagsUsers;
-    }
-
-    public HashMap<Integer, Post> getPosts() {
-        return posts;
-    }
-    public void setPosts(HashMap<Integer, Post> posts) {
-        this.posts = posts;
-    }
-
-    public HashMap<Integer, HashSet<String>> getNewUpvotes() {
-        return newUpvotes;
-    }
-    public void setNewUpvotes(HashMap<Integer, HashSet<String>> newUpvotes) {
-        this.newUpvotes = newUpvotes;
-    }
-
-    public HashMap<Integer, HashSet<String>> getNewDownvotes() {
-        return newDownvotes;
-    }
-    public void setNewDownvotes(HashMap<Integer, HashSet<String>> newDownvotes) {
-        this.newDownvotes = newDownvotes;
-    }
-
-    public HashMap<Integer, ArrayList<String>> getNewComments() {
-        return newComments;
-    }
-    public void setNewComments(HashMap<Integer, ArrayList<String>> newComments) {
-        this.newComments = newComments;
-    }
-    //#endregion
-
     // Constructors ----------------------------------------------------------------------------------
-    public SocialService(ConcurrentHashMap<String, User> users, Set<String> tags, int idPostCounter, 
+    public SocialService(ConcurrentHashMap<String, User> users, Set<String> tags, int postIdCounter, 
             HashSet<String> activeUsernames, 
             HashMap<String, HashSet<User>> tagsUsers, 
             HashMap<Integer, Post> posts,
@@ -105,8 +31,7 @@ public class SocialService {
             HashMap<Integer, HashSet<String>> newDownvotes,
             HashMap<Integer, ArrayList<String>> newComments) {
         this.users = users;
-        this.tags = tags;
-        this.idPostCounter = idPostCounter;
+        this.postIdCounter = postIdCounter;
         this.activeUsernames = activeUsernames;
         this.tagsUsers = tagsUsers;
         this.posts = posts;
@@ -120,11 +45,7 @@ public class SocialService {
      */
     public SocialService() {
         this.users = new ConcurrentHashMap<>();
-        this.tags = new HashSet<>();
-        for (String tag : tagsArr) {
-            this.tags.add(tag);
-        }
-        this.idPostCounter = 0;
+        this.postIdCounter = 0;
         this.activeUsernames = new HashSet<>();
         this.tagsUsers = new HashMap<>();
         this.posts = new HashMap<>();
@@ -133,5 +54,4 @@ public class SocialService {
         this.newComments = new HashMap<>();
     }
 
-    
 }
