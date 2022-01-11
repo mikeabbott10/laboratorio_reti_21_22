@@ -34,7 +34,7 @@ public final class HttpResponseFactory {
         return buildImmediateResponse(HttpStatus.NOT_FOUND, responseMessage);
     }
 
-    public Object buildForbiddenResponse(String msg) throws JsonMappingException, JsonProcessingException {
+    public HttpResponse buildForbiddenResponse(String msg) throws JsonMappingException, JsonProcessingException {
         String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, String>() {{
             put("message", msg);
         }});

@@ -20,6 +20,7 @@ import server.util.expressRouting.ExpressRoute;
 
 public class HttpRequestValidator {
     protected String userRouteDefinition = "/user/:userID";
+    protected String userWalletRouteDefinition = "/user/:userID/wallet/:bitcoin";
     protected String postSetRouteDefinition = "/post";
     protected String postRouteDefinition = "/post/:postID";
     protected String userPostsRouteDefinition = "/posts/:userID";
@@ -28,6 +29,8 @@ public class HttpRequestValidator {
     protected Map<String, String> GETPathValidation(HttpRequest request) {
         Map<String, String> mappedPath;
         if( (mappedPath = parsePath(request.getPath(), userRouteDefinition)) != null ){
+            return mappedPath;
+        }else if( (mappedPath = parsePath(request.getPath(), userWalletRouteDefinition)) != null ){
             return mappedPath;
         }else if( (mappedPath = parsePath(request.getPath(), postRouteDefinition)) != null ){
             return mappedPath;

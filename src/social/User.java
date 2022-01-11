@@ -2,8 +2,11 @@ package social;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.sql.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.annotation.JsonFilter;
 
@@ -12,7 +15,7 @@ import lombok.NoArgsConstructor;
 import social.password.Password;
 
 @NoArgsConstructor
-@JsonFilter("userPasswordFilter") // ignoring the password field if serialize with this filter name
+@JsonFilter("userFilter") // ignore some field serializing with this filter name
 public @Data class User implements java.io.Serializable, Comparable<User>{
     private String username; // username is the User ID
     private Password password;
@@ -21,10 +24,11 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
     private HashSet<String> followers; // users who follow this
     private HashSet<String> following; // users this follows
     private double wallet;
+    private Map<Date, Integer> walletHistory;
     
     public User(SocialService social, String username, String password, String[] tags) 
                         throws NoSuchAlgorithmException, InvalidKeySpecException{
-        this.username = username.trim();
+        this.username = username;
         this.password = new Password(password);
         // tags
         this.tags = tags;
@@ -36,7 +40,7 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
         this.followers = new HashSet<>();
         this.following = new HashSet<>();
         this.wallet = 0;
-
+        this.walletHistory = new ConcurrentHashMap<>();
     }
 
     public boolean addPost(int postId) {

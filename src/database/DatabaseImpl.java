@@ -3,7 +3,6 @@ package database;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Vector;
 
 import exceptions.DatabaseException;

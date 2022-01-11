@@ -8,12 +8,20 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 public class JacksonUtil {
-    public static String getStringFromObjectIgnoreField(Object obj, String ignoredField)
+    /**
+     * Get a string representation of obj ignoring some field
+     * @param obj
+     * @param filterName the name of the filter
+     * @param ignoredFields the fields of obj to ignore
+     * @return the string representation of obj
+     * @throws JsonProcessingException
+     */
+    public static String getStringFromObjectIgnoreFields(Object obj, String filterName, String... ignoredFields)
             throws JsonProcessingException{
         SimpleBeanPropertyFilter theFilter = SimpleBeanPropertyFilter
-            .serializeAllExcept(ignoredField);
+            .serializeAllExcept(ignoredFields);
         FilterProvider filters = new SimpleFilterProvider()
-            .addFilter("userPasswordFilter", theFilter);
+            .addFilter(filterName, theFilter);
         var objectMapper = new ObjectMapper();
         return objectMapper.writer(filters).writeValueAsString(obj);
         

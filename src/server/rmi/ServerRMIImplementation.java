@@ -48,7 +48,7 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         // tags check
         if(tags.length > 5) throw new TooManyTagsException();
         
-        if( db.addNewUser(username, password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
+        if( db.addNewUser(username.trim(), password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
             throw new InvalidUsername("This name already exists.");
 
         // debug
