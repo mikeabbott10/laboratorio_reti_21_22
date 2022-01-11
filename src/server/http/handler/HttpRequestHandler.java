@@ -1,6 +1,9 @@
 package server.http.handler;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,8 +76,27 @@ public class HttpRequestHandler {
     }
 
     //#region PUT, DELETE, POST, GET handling
-    private HttpResponse PUTRequestHandler(Database db, HttpRequest request, User user) {
-        return null;
+    private HttpResponse PUTRequestHandler(Database db, HttpRequest request, User user) 
+            throws JsonMappingException, JsonProcessingException {
+        Map<String, String> mappedPath = validator.PUTPathValidation(request);
+        if(mappedPath == null){
+            return new HttpResponseFactory().buildBadRequest(
+                    request.getMethod() + " " + request.getPath() + " is not allowed");
+        }
+        
+        switch( request.getPath().split("/")[1] ){
+            case "user":{
+                // follow or unfollow the user with id userID
+                
+            }
+            case "post":{
+                // rewin, comment, vote or unvote the post with id postID
+            }
+            case "logout":{
+                // perform logout
+            }
+        }
+        return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
     }
 
     private HttpResponse DELETERequestHandler(Database db, HttpRequest request, User user) 
@@ -130,20 +152,25 @@ public class HttpRequestHandler {
                 if(userFromUserID==null)
                     return new HttpResponseFactory().buildNotFound("The user does not exist.");
                 
-                if(mappedPath.containsKey("wallet")){
+                if(mappedPath.containsKey("btcWallet")){
                     // get own wallet
                     if(user.equals(userFromUserID)){
                         // allowed
                         String responseMessage;
-                        if(mappedPath.get("wallet").equals("1")){
+                        if(mappedPath.get("btcWallet").equals("1")){
                             // get bitcoin wallet
-                            int btc = getBitcoinWallet(user.getWallet());
-
-                            responseMessage = JacksonUtil.getStringFromObject( 
-                                new HashMap<String, Integer>() {{
-                                    put("wallet", btc);
-                                }}
-                            );
+                            try {
+                                double btc = getBitcoinWallet(user.getWallet());
+                                responseMessage = JacksonUtil.getStringFromObject( 
+                                    new HashMap<String, Double>() {{
+                                        put("wallet", btc);
+                                    }}
+                                );
+                            } catch (IOException | InterruptedException | NumberFormatException | NullPointerException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                                return new HttpResponseFactory().buildBadRequest("Sorry, we can't get this information at the moment."); 
+                            }
                         }else{
                             //get wallet
                             responseMessage = JacksonUtil.getStringFromObject( 
@@ -219,8 +246,24 @@ public class HttpRequestHandler {
     }
     //#endregion
 
-    private int getBitcoinWallet(double wallet) {
-        return 0;
+    private double getBitcoinWallet(double userWallet) throws IOException, InterruptedException {
+        if (userWallet == 0.0) return 0.0;
+        String res = performGETRequestTo("https://www.random.org/decimal-fractions/?num=1&dec=10&col=1&format=plain&rnd=new");
+        //LOGGER.info("WALLET -------> "+ res);
+        return userWallet * Double.parseDouble(res.toString());
+    }
+
+    public static String performGETRequestTo(String uri) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(URI.create(uri))
+                .GET()
+                .build();
+    
+        java.net.http.HttpResponse<String> response =
+              client.send(request, BodyHandlers.ofString());
+    
+        return response.body();
     }
 
     @NoArgsConstructor

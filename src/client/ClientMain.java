@@ -59,23 +59,35 @@ public class ClientMain {
         }
 
         try {
-            var values = new HashMap<String, String>() {{
+            var post = new HashMap<String, String>() {{
                 put("title", "TITOLONE");
                 put("content", "CONTENUTONE");
             }};
     
-            var objectMapper = new ObjectMapper();
-            String requestBody = objectMapper.writeValueAsString(values);
+            var postObjectMapper = new ObjectMapper();
+            String createPostRequestBody = postObjectMapper.writeValueAsString(post);
 
             post("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post", 
-                requestBody);
+                createPostRequestBody);
 
-            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio);
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio + "/wallet/0");
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio + "/wallet/1"); // in bitcoin
+
             get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
+
+            var postComment = new HashMap<String, String>() {{
+                put("comment", "COMMENTONE");
+            }};
+    
+            var commentObjectMapper = new ObjectMapper();
+            String commentPostRequestBody = commentObjectMapper.writeValueAsString(postComment);
+
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/comment",
+                commentPostRequestBody);
 
             delete("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
 
-            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/users/artaaaaaaaaaa");
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/users/cinema");
 
 
         } catch (Exception e) {
@@ -97,27 +109,6 @@ public class ClientMain {
               client.send(request, BodyHandlers.ofString());
     
         System.out.println(response.body());
-        /*HttpURLConnection con = null;
-        try {
-
-            var myurl = new URL(uri);
-            con = (HttpURLConnection) myurl.openConnection();
-            con.setRequestMethod("GET");
-            StringBuilder content;
-            try (BufferedReader in = new BufferedReader(
-                    new InputStreamReader(con.getInputStream()))) {
-                String line;
-                content = new StringBuilder();
-                while ((line = in.readLine()) != null) {
-                    content.append(line);
-                    content.append(System.lineSeparator());
-                }
-            }
-            System.out.println(content.toString());
-
-        } finally {
-            con.disconnect();
-        }*/
     }
 
     public static void delete(String uri) throws Exception {
@@ -132,6 +123,47 @@ public class ClientMain {
               client.send(request, BodyHandlers.ofString());
     
         System.out.println(response.body());
+    }
+
+    public static void put(String url, String parameters) throws Exception {
+        byte[] putData = parameters.getBytes(StandardCharsets.UTF_8);
+        HttpURLConnection con = null;
+        try {
+
+            var myurl = new URL(url);
+            con = (HttpURLConnection) myurl.openConnection();
+
+            con.setDoOutput(true);
+            con.setRequestMethod("PUT");
+            con.setRequestProperty("User-Agent", "Java client");
+            con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            con.setRequestProperty("username", nomeUtenteProvvisorio);
+            con.setRequestProperty("password", passUtenteProvvisoria);
+
+            try (var wr = new DataOutputStream(con.getOutputStream())) {
+
+                wr.write(putData);
+            }
+
+            StringBuilder content;
+
+            try (var br = new BufferedReader(
+                    new InputStreamReader(con.getInputStream()))) {
+
+                String line;
+                content = new StringBuilder();
+
+                while ((line = br.readLine()) != null) {
+                    content.append(line);
+                    content.append(System.lineSeparator());
+                }
+            }
+
+            System.out.println(content.toString());
+
+        } finally {
+            con.disconnect();
+        }
     }
 
     public static void post(String url, String parameters) throws Exception {

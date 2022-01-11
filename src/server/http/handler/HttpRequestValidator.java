@@ -19,12 +19,17 @@ import server.http.response.HttpResponseFactory;
 import server.util.expressRouting.ExpressRoute;
 
 public class HttpRequestValidator {
-    protected String userRouteDefinition = "/user/:userID";
-    protected String userWalletRouteDefinition = "/user/:userID/wallet/:bitcoin";
-    protected String postSetRouteDefinition = "/post";
-    protected String postRouteDefinition = "/post/:postID";
-    protected String userPostsRouteDefinition = "/posts/:userID";
-    protected String tagUsersRouteDefinition = "/users/:tagName";
+    protected final String userRouteDefinition = "/user/:userID";
+    protected final String userWalletRouteDefinition = "/user/:userID/wallet/:btcWallet";
+    protected final String postSetRouteDefinition = "/post";
+    protected final String postRouteDefinition = "/post/:postID";
+    protected final String userPostsRouteDefinition = "/posts/:userID";
+    protected final String tagUsersRouteDefinition = "/users/:tagName";
+
+    protected final String userActionRouteDefinition = "/user/:userID/action/:actionID";
+    protected final String postActionRouteDefinition = "/post/:postID/action/:actionID";
+    protected final String logoutActionRouteDefinition = "/logout";
+
 
     protected Map<String, String> GETPathValidation(HttpRequest request) {
         Map<String, String> mappedPath;
@@ -37,6 +42,18 @@ public class HttpRequestValidator {
         }else if( (mappedPath = parsePath(request.getPath(), userPostsRouteDefinition)) != null ){
             return mappedPath;
         }else if( (mappedPath = parsePath(request.getPath(), tagUsersRouteDefinition)) != null ){
+            return mappedPath;
+        }
+        return null;
+    }
+
+    public Map<String, String> PUTPathValidation(HttpRequest request) {
+        Map<String, String> mappedPath;
+        if( (mappedPath = parsePath(request.getPath(), userActionRouteDefinition)) != null ){
+            return mappedPath;
+        }else if( (mappedPath = parsePath(request.getPath(), postActionRouteDefinition)) != null ){
+            return mappedPath;
+        }else if( (mappedPath = parsePath(request.getPath(), logoutActionRouteDefinition)) != null ){
             return mappedPath;
         }
         return null;
