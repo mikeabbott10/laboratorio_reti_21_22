@@ -77,7 +77,7 @@ public class HttpRequestHandler {
 
     //#region PUT, DELETE, POST, GET handling
     private HttpResponse PUTRequestHandler(Database db, HttpRequest request, User user) 
-            throws JsonMappingException, JsonProcessingException {
+            throws JsonProcessingException {
         Map<String, String> mappedPath = validator.PUTPathValidation(request);
         if(mappedPath == null){
             return new HttpResponseFactory().buildBadRequest(
@@ -86,11 +86,72 @@ public class HttpRequestHandler {
         
         switch( request.getPath().split("/")[1] ){
             case "user":{
-                // follow or unfollow the user with id userID
-                
+                if(user.getUsername().equals(mappedPath.get("userID"))){
+                    new HttpResponseFactory().buildBadRequest("Cannot follow yourself.");
+                }
+                if( mappedPath.get("action").equals("follow")){
+                    // follow user with id userID
+                    db.addFollowerTo(user.getUsername(), mappedPath.get("userID"));
+                    String responseMessage = JacksonUtil.getStringFromObject( 
+                        new HashMap<String, String>() {{
+                            put("message", "Follow added.");
+                        }}
+                    );
+                    return new HttpResponseFactory().buildSuccess(responseMessage);
+                }else{
+                    // unfollow user with id userID
+                    db.removeFollowerTo(user.getUsername(), mappedPath.get("userID"));
+                    String responseMessage = JacksonUtil.getStringFromObject( 
+                        new HashMap<String, String>() {{
+                            put("message", "Follow removed.");
+                        }}
+                    );
+                    return new HttpResponseFactory().buildSuccess(responseMessage);
+                }
             }
             case "post":{
                 // rewin, comment, vote or unvote the post with id postID
+                switch( mappedPath.get("actionID") ){
+                    case "comment":{
+                        try{
+                            Comment postProperties = 
+                                (Comment) JacksonUtil.getObjectFromString(request.getBody(), Comment.class);
+                            db.addComment( Integer.parseInt(mappedPath.get("postID")), postProperties.comment, user.getUsername() );
+                            // post commented
+                            String responseMessage = JacksonUtil.getStringFromObject( 
+                                new HashMap<String, String>() {{
+                                    put("message", "Comment added.");
+                                }}
+                            );
+                            return new HttpResponseFactory().buildSuccess(responseMessage);
+                        }catch(JsonProcessingException e){
+                            throw e;
+                        }catch(Exception ex){
+                            return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+                        }
+                    }
+                    case "rewin":{
+                        
+                    }
+                    case "vote":{
+                        db.addVoteTo( Integer.parseInt(mappedPath.get("postID")), user.getUsername() );
+                        String responseMessage = JacksonUtil.getStringFromObject( 
+                            new HashMap<String, String>() {{
+                                put("message", "Upvote added.");
+                            }}
+                        );
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }
+                    case "unvote":{
+                        db.addDownvoteTo( Integer.parseInt(mappedPath.get("postID")), user.getUsername() );
+                        String responseMessage = JacksonUtil.getStringFromObject( 
+                            new HashMap<String, String>() {{
+                                put("message", "Downvote added.");
+                            }}
+                        );
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }
+                }
             }
             case "logout":{
                 // perform logout
@@ -100,7 +161,7 @@ public class HttpRequestHandler {
     }
 
     private HttpResponse DELETERequestHandler(Database db, HttpRequest request, User user) 
-            throws JsonMappingException, JsonProcessingException {
+            throws JsonProcessingException {
         // only one action: remove post
         Map<String, String> mappedPath = 
             validator.parsePath(request.getPath(), validator.postRouteDefinition);
@@ -122,23 +183,30 @@ public class HttpRequestHandler {
     }
 
     private HttpResponse POSTRequestHandler(Database db, HttpRequest request, User user) 
-            throws JsonMappingException, JsonProcessingException, DatabaseException {
+            throws JsonProcessingException, DatabaseException {
         // only one action: create post
         if( !request.getPath().equals(validator.postSetRouteDefinition) ) 
             return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
-        TitleContent postProperties = (TitleContent) JacksonUtil.getObjectFromString(request.getBody(), TitleContent.class);
-        int postID = db.createPost( postProperties.title, postProperties.content, user.getUsername());
-        // post created
-        String responseMessage = JacksonUtil.getStringFromObject( 
-            new HashMap<String, Integer>() {{
-                put("postID", postID);
-            }}
-        );
-        return new HttpResponseFactory().buildSuccess(responseMessage);
+        try{
+            TitleContent postProperties = 
+                (TitleContent) JacksonUtil.getObjectFromString(request.getBody(), TitleContent.class);
+            int postID = db.createPost( postProperties.title, postProperties.content, user.getUsername());
+            // post created
+            String responseMessage = JacksonUtil.getStringFromObject( 
+                new HashMap<String, Integer>() {{
+                    put("postID", postID);
+                }}
+            );
+            return new HttpResponseFactory().buildSuccess(responseMessage);
+        }catch(JsonProcessingException | DatabaseException e){
+            throw e;
+        }catch(Exception ex){
+            return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+        }
     }
 
     private HttpResponse GETRequestHandler(Database db, HttpRequest request, User user) 
-            throws JsonMappingException, JsonProcessingException {
+            throws JsonProcessingException {
         Map<String, String> mappedPath = validator.GETPathValidation(request);
         if(mappedPath == null){
             return new HttpResponseFactory().buildBadRequest(
@@ -270,6 +338,11 @@ public class HttpRequestHandler {
     private @Data static class TitleContent{
         protected String title;
         protected String content;
+    }
+
+    @NoArgsConstructor
+    private @Data static class Comment{
+        protected String comment;
     }
     
 }

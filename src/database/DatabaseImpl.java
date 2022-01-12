@@ -160,13 +160,41 @@ public class DatabaseImpl implements Database{
         return users;
     }
 
+    /**
+     * query simulation:
+     *      INSERT INTO comments (PostID, Comment, Author) VALUES (postID, content, author);
+     */
     @Override
-    public void addComment(String postId, String comment, String author){
-        
+    public void addComment(int postID, String comment, String author){
+        social.getPosts().get(postID).addComment(author, comment);
     }
 
     @Override
     public void rewinPost(int postId, String author) {
+        
+    }
+
+    @Override
+    public void addFollowerTo(String username, String userToFollow) {
+        social.getUsers().get(userToFollow).addFollower(username);
+        social.getUsers().get(username).addFollowing(userToFollow);
+    }
+
+    @Override
+    public void removeFollowerTo(String username, String userToUnfollow) {
+        social.getUsers().get(userToUnfollow).removeFollower(username);
+        social.getUsers().get(username).removeFollowing(userToUnfollow);
+    }
+
+    @Override
+    public void addVoteTo(int postID, String username) {
+        social.getPosts().get(postID).addVote(username);
+        
+    }
+
+    @Override
+    public void addDownvoteTo(int postID, String username) {
+        social.getPosts().get(postID).addDownVote(username);
         
     }
 

@@ -85,6 +85,13 @@ public class ClientMain {
             put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/comment",
                 commentPostRequestBody);
 
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/vote", null);
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
+
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
+
             delete("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
 
             get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/users/cinema");
@@ -126,10 +133,11 @@ public class ClientMain {
     }
 
     public static void put(String url, String parameters) throws Exception {
-        byte[] putData = parameters.getBytes(StandardCharsets.UTF_8);
+        byte[] putData = null;
+        if(parameters!=null) 
+            putData = parameters.getBytes(StandardCharsets.UTF_8);
         HttpURLConnection con = null;
         try {
-
             var myurl = new URL(url);
             con = (HttpURLConnection) myurl.openConnection();
 
@@ -140,25 +148,23 @@ public class ClientMain {
             con.setRequestProperty("username", nomeUtenteProvvisorio);
             con.setRequestProperty("password", passUtenteProvvisoria);
 
-            try (var wr = new DataOutputStream(con.getOutputStream())) {
-
-                wr.write(putData);
+            if(parameters!=null){
+                try (var wr = new DataOutputStream(con.getOutputStream())) {
+                    wr.write(putData);
+                }
             }
 
             StringBuilder content;
 
             try (var br = new BufferedReader(
                     new InputStreamReader(con.getInputStream()))) {
-
                 String line;
                 content = new StringBuilder();
-
                 while ((line = br.readLine()) != null) {
                     content.append(line);
                     content.append(System.lineSeparator());
                 }
             }
-
             System.out.println(content.toString());
 
         } finally {

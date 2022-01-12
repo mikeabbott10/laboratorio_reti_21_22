@@ -14,10 +14,14 @@ public interface Database {
     public int createPost(String title, String content, String author) throws DatabaseException;
     public boolean removePost(User user, int postID);
 
-    public void rewinPost(int postId, String author);
-    public void addComment(String postId, String comment, String author);
+    public void rewinPost(int postID, String author);
+    public void addComment(int postID, String comment, String author);
     public Post getPost(int postID);
     public Post[] getPostsFromUsername(String string);
     public HashMap<String, User> getUsersFromTagname(String string);
+    public void addFollowerTo(String username, String string);
+    public void removeFollowerTo(String username, String userToFollow);
+    public void addVoteTo(int parseInt, String username);
+    public void addDownvoteTo(int postID, String username);
     
 }

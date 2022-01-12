@@ -47,6 +47,22 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
         return this.posts.add(postId);
     }
 
+    public void addFollower(String username){
+        this.followers.add(username);
+    }
+
+    public void addFollowing(String username){
+        this.following.add(username);
+    }
+
+    public void removeFollower(String username){
+        this.followers.remove(username);
+    }
+
+    public void removeFollowing(String username){
+        this.following.remove(username);
+    }
+
     @Override 
     public boolean equals(Object u2){
         if(u2 == null)
