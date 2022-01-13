@@ -4,20 +4,26 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.rmi.RemoteException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 import database.Database;
+import exceptions.AlreadyConnectedException;
 import exceptions.DatabaseException;
+import exceptions.ForbiddenActionException;
+import exceptions.ResourceNotFoundException;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import server.ServerMain;
 import server.http.request.HttpRequest;
 import server.http.response.HttpResponse;
 import server.http.response.HttpResponseFactory;
 import server.nio.CustomRequest;
+import server.rmi.ServerRMIImplementation;
 import server.util.JacksonUtil;
 import server.util.Logger;
 import social.Post;
@@ -86,37 +92,64 @@ public class HttpRequestHandler {
         
         switch( request.getPath().split("/")[1] ){
             case "user":{
-                if(user.getUsername().equals(mappedPath.get("userID"))){
+                if(user.getUsername().equals(mappedPath.get("userID")))
                     new HttpResponseFactory().buildBadRequest("Cannot follow yourself.");
-                }
+                if( db.getUser(mappedPath.get("userID"))==null )
+                    new HttpResponseFactory().buildNotFound("User does not exist.");
                 if( mappedPath.get("action").equals("follow")){
                     // follow user with id userID
-                    db.addFollowerTo(user.getUsername(), mappedPath.get("userID"));
-                    String responseMessage = JacksonUtil.getStringFromObject( 
-                        new HashMap<String, String>() {{
-                            put("message", "Follow added.");
-                        }}
-                    );
-                    return new HttpResponseFactory().buildSuccess(responseMessage);
-                }else{
+                    try{   
+                        db.addFollowerTo(user.getUsername(), mappedPath.get("userID"));
+                        String responseMessage = JacksonUtil.getStringFromObject( 
+                            new HashMap<String, String>() {{
+                                put("message", "Follow added.");
+                            }}
+                        );
+                        try {
+                            ServerMain.serverRMIService.updateFollowersList(db.getUser(mappedPath.get("userID")));
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }catch(ResourceNotFoundException e){
+                        return new HttpResponseFactory().buildNotFound(e.getMessage());
+                    }
+                }else if ( mappedPath.get("action").equals("unfollow") ){
                     // unfollow user with id userID
-                    db.removeFollowerTo(user.getUsername(), mappedPath.get("userID"));
-                    String responseMessage = JacksonUtil.getStringFromObject( 
-                        new HashMap<String, String>() {{
-                            put("message", "Follow removed.");
-                        }}
-                    );
-                    return new HttpResponseFactory().buildSuccess(responseMessage);
+                    try{
+                        db.removeFollowerTo(user.getUsername(), mappedPath.get("userID"));
+                        String responseMessage = JacksonUtil.getStringFromObject( 
+                            new HashMap<String, String>() {{
+                                put("message", "Follow removed.");
+                            }}
+                        );
+                        try {
+                            ServerMain.serverRMIService.updateFollowersList(db.getUser(mappedPath.get("userID")));
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                    }catch(ResourceNotFoundException e){
+                        return new HttpResponseFactory().buildNotFound(e.getMessage());
+                    }
                 }
+                return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
             }
             case "post":{
                 // rewin, comment, vote or unvote the post with id postID
+                int postID;
+                try{
+                    postID = Integer.parseInt(mappedPath.get("postID"));
+                }catch(NumberFormatException e){
+                    return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+                }
+
                 switch( mappedPath.get("actionID") ){
                     case "comment":{
                         try{
                             Comment postProperties = 
                                 (Comment) JacksonUtil.getObjectFromString(request.getBody(), Comment.class);
-                            db.addComment( Integer.parseInt(mappedPath.get("postID")), postProperties.comment, user.getUsername() );
+                            db.addComment( postID, postProperties.comment, user.getUsername() );
                             // post commented
                             String responseMessage = JacksonUtil.getStringFromObject( 
                                 new HashMap<String, String>() {{
@@ -126,35 +159,82 @@ public class HttpRequestHandler {
                             return new HttpResponseFactory().buildSuccess(responseMessage);
                         }catch(JsonProcessingException e){
                             throw e;
-                        }catch(Exception ex){
-                            return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+                        }catch(ResourceNotFoundException ex){
+                            return new HttpResponseFactory().buildNotFound(ex.getMessage());
+                        }catch(ForbiddenActionException exc){
+                            return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
                         }
                     }
                     case "rewin":{
-                        
+                        try{
+                            db.rewinPost(postID, user.getUsername());
+                            String responseMessage = JacksonUtil.getStringFromObject( 
+                                new HashMap<String, String>() {{
+                                    put("message", "Post rewinned.");
+                                }}
+                            );
+                            return new HttpResponseFactory().buildSuccess(responseMessage);
+                        }catch(ResourceNotFoundException ex){
+                            return new HttpResponseFactory().buildNotFound(ex.getMessage());
+                        }catch(ForbiddenActionException exc){
+                            return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }
                     }
                     case "vote":{
-                        db.addVoteTo( Integer.parseInt(mappedPath.get("postID")), user.getUsername() );
-                        String responseMessage = JacksonUtil.getStringFromObject( 
-                            new HashMap<String, String>() {{
-                                put("message", "Upvote added.");
-                            }}
-                        );
-                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                        try{
+                            db.addVoteTo( postID, user.getUsername() );
+                            String responseMessage = JacksonUtil.getStringFromObject( 
+                                new HashMap<String, String>() {{
+                                    put("message", "Upvote added.");
+                                }}
+                            );
+                            return new HttpResponseFactory().buildSuccess(responseMessage);
+                        }catch(ResourceNotFoundException ex){
+                            return new HttpResponseFactory().buildNotFound(ex.getMessage());
+                        }catch(ForbiddenActionException exc){
+                            return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }
                     }
                     case "unvote":{
-                        db.addDownvoteTo( Integer.parseInt(mappedPath.get("postID")), user.getUsername() );
-                        String responseMessage = JacksonUtil.getStringFromObject( 
-                            new HashMap<String, String>() {{
-                                put("message", "Downvote added.");
-                            }}
-                        );
-                        return new HttpResponseFactory().buildSuccess(responseMessage);
+                        try{
+                            db.addDownvoteTo( postID, user.getUsername() );
+                            String responseMessage = JacksonUtil.getStringFromObject( 
+                                new HashMap<String, String>() {{
+                                    put("message", "Downvote added.");
+                                }}
+                            );
+                            return new HttpResponseFactory().buildSuccess(responseMessage);
+                        }catch(ResourceNotFoundException ex){
+                            return new HttpResponseFactory().buildNotFound(ex.getMessage());
+                        }catch(ForbiddenActionException exc){
+                            return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }
                     }
                 }
             }
             case "logout":{
                 // perform logout
+                db.removeLoggedUser(user.getUsername());
+                server.ServerMain.serverRMIService.safeUnregisterForCallback(user.getUsername());
+                String responseMessage = JacksonUtil.getStringFromObject( 
+                    new HashMap<String, String>() {{
+                        put("message", "Logout performed.");
+                    }}
+                );
+                return new HttpResponseFactory().buildSuccess(responseMessage);
+            }
+            case "login":{
+                try{
+                    db.addLoggedUser(user.getUsername());
+                }catch(AlreadyConnectedException e){
+                    return new HttpResponseFactory().buildForbiddenResponse("User already connected.");
+                }
+                String responseMessage = JacksonUtil.getStringFromObject( 
+                    new HashMap<String, String>() {{
+                        put("message", "Login performed.");
+                    }}
+                );
+                return new HttpResponseFactory().buildSuccess(responseMessage);
             }
         }
         return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
@@ -170,16 +250,25 @@ public class HttpRequestHandler {
                     request.getMethod() + " " + request.getPath() + " is not allowed");
         }
         
+        int postID;
+        try{
+            postID = Integer.parseInt(mappedPath.get("postID"));
+        }catch(NumberFormatException e){
+            return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+        }
+
         // remove the post
-        if( db.removePost(user, Integer.parseInt(mappedPath.get("postID"), 10)) ){
+        try{
+            db.removePost(user, postID);
             String responseMessage = JacksonUtil.getStringFromObject(
                 new HashMap<String, String>() {{
                     put("message", "Post deleted.");
                 }}
             );
             return new HttpResponseFactory().buildSuccess(responseMessage);
+        }catch(ResourceNotFoundException e){
+            return new HttpResponseFactory().buildNotFound("The post does not exist.");
         }
-        return new HttpResponseFactory().buildNotFound("The post does not exist.");
     }
 
     private HttpResponse POSTRequestHandler(Database db, HttpRequest request, User user) 

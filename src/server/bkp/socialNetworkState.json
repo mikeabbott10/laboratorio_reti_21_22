@@ -1,0 +1,50 @@
+{
+  "users" : {
+    "nomeUtente1" : {
+      "username" : "nomeUtente1",
+      "password" : {
+        "hashedPwd" : "1000:6a92bb71acbfc11e8ccd8a72b4ba5bbf:7aad88e48c728b92f7f18bc1be6104ecd36386c3705317c37ba6bb4a1952390d0159a53ddfebe0b776303cbb3345f0cdb8f4ac68ad10ba75df8af9e5855e1131"
+      },
+      "posts" : [ 0 ],
+      "tags" : [ "art", "cinema" ],
+      "followers" : [ ],
+      "following" : [ ],
+      "wallet" : 0.23104906018664842,
+      "walletHistory" : [ {
+        "date" : "2022-39-13 02:39:13",
+        "amount" : 0.16173434213065388
+      }, {
+        "date" : "2022-39-13 02:39:13",
+        "amount" : 0.06931471805599454
+      } ]
+    }
+  },
+  "posts" : {
+    "0" : {
+      "id" : 0,
+      "title" : "TITOLONE",
+      "content" : "CONTENUTONE",
+      "author" : "nomeUtente1",
+      "date" : 1642081151097,
+      "upvotes" : [ "nomeUtente1" ],
+      "downvotes" : [ ],
+      "comments" : {
+        "nomeUtente1" : [ {
+          "author" : "nomeUtente1",
+          "comment" : "COMMENTONE",
+          "date" : 1642081151404
+        } ]
+      },
+      "rewinnedBy" : [ ],
+      "postAge" : 0
+    }
+  },
+  "postIdCounter" : 1,
+  "tagsUsers" : {
+    "art" : [ "nomeUtente1" ],
+    "cinema" : [ "nomeUtente1" ]
+  },
+  "newUpvotes" : { },
+  "newDownvotes" : { },
+  "newComments" : { }
+}

@@ -1,6 +1,7 @@
 package client;
 import java.rmi.RemoteException;
 import java.rmi.server.RemoteObject;
+import java.util.HashSet;
 
 public class ClientNotifyEventImplementation extends RemoteObject 
                             implements ClientNotifyEventInterface {
@@ -9,12 +10,14 @@ public class ClientNotifyEventImplementation extends RemoteObject
     }
 
     /**
-     * metodo che può essere richiamato dal servente per 
-     * notificare aggiornamento della lista di followers
+     * Called by server to notify the new followers list
      * @throws Exception
      */
-    public void newFollowersList (String[] users) throws RemoteException {
-        System.out.println("new followers list received");
+    @Override
+    public void newFollowersList(HashSet<String> followersList) 
+            throws RemoteException, Exception {
+        System.out.println("new followers list received: "+ followersList);
+        
     }
 
     

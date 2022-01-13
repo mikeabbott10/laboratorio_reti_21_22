@@ -32,27 +32,26 @@ public class ClientMain {
     private static final String passUtenteProvvisoria = "passUtente1";
 
     public static void main(String args[]){
-
         // RMI
         try {
 
             // System.out.println("Looking for server");
-            ServerRMIInterface server = (ServerRMIInterface) Naming.lookup(serverUrl + rmiServiceName);
+            ServerRMIInterface serverRMIObj = (ServerRMIInterface) Naming.lookup(serverUrl + rmiServiceName);
 
             // System.out.println("Registering for callback");
             ClientNotifyEventInterface callbackObj = new ClientNotifyEventImplementation();
             ClientNotifyEventInterface stub = 
                 (ClientNotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
 
-            server.register(nomeUtenteProvvisorio, passUtenteProvvisoria, new String[]{"art","cinema"});
-            server.registerForCallback(stub, nomeUtenteProvvisorio, passUtenteProvvisoria);
+            serverRMIObj.register(nomeUtenteProvvisorio, passUtenteProvvisoria, new String[]{"art","cinema"});
+            serverRMIObj.registerForCallback(stub, nomeUtenteProvvisorio, passUtenteProvvisoria);
 
             // attende gli eventi generati dal server per
             // un certo intervallo di tempo;
             //Thread.sleep (10000);
 
             // System.out.println("Unregistering for callback");
-            server.unregisterForCallback(stub);
+            serverRMIObj.unregisterForCallback(stub);
         } catch (Exception e){ 
             e.printStackTrace();
             System.err.println("Client exception:"+ e.getMessage());
@@ -85,16 +84,30 @@ public class ClientMain {
             put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/comment",
                 commentPostRequestBody);
 
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
             put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/vote", null);
-            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
-            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
-            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/unvote", null);
 
             get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
 
-            delete("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
+            try{
+                Thread.sleep(15000);
+            }catch(InterruptedException ignored){}
 
-            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/users/cinema");
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio + "/wallet/0");
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio + "/wallet/1"); // in bitcoin
+
+            put("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0/action/comment",
+                commentPostRequestBody);
+
+            try{
+                Thread.sleep(15000);
+            }catch(InterruptedException ignored){}
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio + "/wallet/0");
+            get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/user/" + nomeUtenteProvvisorio + "/wallet/1"); // in bitcoin
+
+            //delete("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/post/0");
+
+            //get("http://"+ SERVER_IP +":"+ HTTP_SERVER_PORT + "/users/cinema");
 
 
         } catch (Exception e) {

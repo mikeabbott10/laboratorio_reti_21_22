@@ -2,40 +2,46 @@ package server;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import database.Database;
 import database.DatabaseImpl;
+import server.backup.BackupDaemon;
+import server.multicast.RewardDaemon;
 import server.nio.NIOServer;
 import server.rmi.ServerRMIImplementation;
 import server.rmi.ServerRMIInterface;
+import server.util.Constants;
+import server.util.Logger;
 import social.SocialService;
 
 public class ServerMain {
-    // rmi
-    private static final int SERVER_RMI_PORT = 25258;
-    private static final int HTTP_SERVER_PORT = 8080;
-    private static final String SERVER_IP = "localhost";
-    private static final String serverUrl = "rmi://"+ SERVER_IP +":" + SERVER_RMI_PORT;
-    private static final String rmiServiceName = "/winsomeservice";
+    private static Logger LOGGER = new Logger(ServerMain.class.getName());
 
-    //tcp
-    public final static int TCP_SERVICE_PORT = 6789;
     public static InetAddress localhostAddr;
     
     public static Database db;
     private static SocialService social;
+
+    public static ServerRMIImplementation serverRMIService;
 
     private static NIOServer nio;
     public static boolean quit;
     
     public static void main(String[] args) throws Exception {
         quit = false;
-        // TODO: server state from json files
-        social = new SocialService();
+        
+        // server state
+        social = getServerStateFromBackup();
         db = new DatabaseImpl(social);
 
         // termination handling
@@ -45,12 +51,47 @@ public class ServerMain {
         try{
             startRMIService();
         }catch (MalformedURLException | RemoteException e) {
-            System.out.println("Communication error " + e.toString());
+            LOGGER.warn("Communication error " + e.toString());
         }
 
-        // nio, http server
-        nio = new NIOServer(HTTP_SERVER_PORT, db);
+        //reward daemon (multicast)
+        Thread rewardThread = new Thread(new RewardDaemon(Thread.currentThread(), db));
+        rewardThread.start();
+
+        //backup daemon
+        Thread backupThread = new Thread(new BackupDaemon(rewardThread, db));
+        backupThread.start();
+
+        //nio, http server
+        nio = new NIOServer(Constants.HTTP_SERVER_PORT, db);
         nio.start();
+
+        try {
+            rewardThread.interrupt();
+            rewardThread.join();
+            backupThread.interrupt();
+            backupThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Get previous state if exists
+     */
+    public static SocialService getServerStateFromBackup() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            if (BackupDaemon.backupFile.exists()) {
+                BufferedReader stateReader = new BufferedReader(new FileReader(BackupDaemon.backupFile));
+                return mapper.readValue(stateReader, new TypeReference<SocialService>(){});
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Failed restoring social network state : "+e.toString());
+            e.printStackTrace();
+        }
+        return new SocialService();
+
         
     }
 
@@ -69,14 +110,14 @@ public class ServerMain {
     }
 
     private static void startRMIService() throws RemoteException, MalformedURLException{
-        ServerRMIImplementation serverService = new ServerRMIImplementation(db);
+        serverRMIService = new ServerRMIImplementation(db);
         // Esportazione dell'Oggetto 
         ServerRMIInterface stub = 
-            (ServerRMIInterface) UnicastRemoteObject.exportObject(serverService, 0);
+            (ServerRMIInterface) UnicastRemoteObject.exportObject(serverRMIService, 0);
         // Creazione di un registry sulla porta PORT
-        LocateRegistry.createRegistry(SERVER_RMI_PORT);
+        LocateRegistry.createRegistry(Constants.SERVER_RMI_PORT);
         // Pubblicazione dello stub nel registry
-        Naming.rebind(serverUrl + rmiServiceName, stub);
+        Naming.rebind(Constants.serverUrl + Constants.rmiServiceName, stub);
         //System.out.println("Server ready");
     }
 

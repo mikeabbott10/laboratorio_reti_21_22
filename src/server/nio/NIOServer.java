@@ -20,7 +20,7 @@ public class NIOServer {
     private static final Logger LOGGER = new Logger(NIOServer.class.getName());
     
     private final int port;
-    public final int BUF_SIZE = 5;
+    public final int BUF_SIZE = 4096;
 
     private Selector selector;
     private Database db;
@@ -92,7 +92,7 @@ public class NIOServer {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         try{
             String raw = new RawRequestReader().readRaw(clientChannel);
-            LOGGER.info("Raw req: \n"+ raw);
+            //LOGGER.info("Raw req: \n"+ raw);
             HttpResponse response = 
                 new HttpRequestHandler().handleRequest(this.db, 
                         new CustomRequest(sel, clientChannel, raw, key));
@@ -110,6 +110,7 @@ public class NIOServer {
         }catch(EndOfStreamException e){
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
+            cancelKeyAndCloseChannel(key);
             e.printStackTrace();
             LOGGER.warn(e.getMessage());
         } catch (DatabaseException e) {

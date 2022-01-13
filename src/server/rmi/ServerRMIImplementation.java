@@ -18,16 +18,15 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
     private final Database db;
 
     /**
-     * Active users at the moment. Note that we allow users 
-     * to be logged from multiple hosts at the same time
+     * Active users at the moment.
      */
-    private ConcurrentHashMap<User, Set<ClientNotifyEventInterface>> notifyEnabledClientInterfaces;
+    private ConcurrentHashMap<String, ClientNotifyEventInterface> notifyEnabledClientInterfaces;
 
     /**
      * Reverse logged user map in order to get faster to the ClientNotifyEventInterface inside notifyEnabledClientInterfaces.
      * Useful for unregistering clients for callbacks in ServerRMIImplementation
      */
-    private ConcurrentHashMap<ClientNotifyEventInterface, User> reverseNotifyEnabledClientInterfaces;
+    private ConcurrentHashMap<ClientNotifyEventInterface, String> reverseNotifyEnabledClientInterfaces;
 
 
     // Constructors ---------------------------------------------------------------------------------------
@@ -73,20 +72,14 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         User user = getAllowedUser(username, password); // throws LoginException, DatabaseException
 
         // user allowed
-        if(!notifyEnabledClientInterfaces.containsKey(user)) {
-            // add new (concurrent) set in notifyEnabledClientInterfaces map
-            notifyEnabledClientInterfaces.put(user, ConcurrentHashMap.newKeySet() );
-        }
-        // add new interface in this set
-        Set<ClientNotifyEventInterface> cneiSet = notifyEnabledClientInterfaces.get(user);
-        if( cneiSet!=null && !cneiSet.add(clientInterface) ){
-            // interface was already inside the set
-            // note that reverseNotifyEnabledClientInterfaces and 
-            // notifyEnabledClientInterfaces are in a consistent state
+        // add new interface
+        if(!notifyEnabledClientInterfaces.containsKey(username)) {
+            notifyEnabledClientInterfaces.put(username, clientInterface );
+            // add new user in reverseNotifyEnabledClientInterfaces map
+            reverseNotifyEnabledClientInterfaces.put(clientInterface, username);
+        }else{
             throw new AlreadyConnectedException();
         }
-        // add new user in reverseNotifyEnabledClientInterfaces map
-        reverseNotifyEnabledClientInterfaces.put(clientInterface, user); 
     }
 
     private User getAllowedUser(String username, String password) 
@@ -102,37 +95,34 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
     @Override 
     public synchronized void unregisterForCallback(ClientNotifyEventInterface clientInterface)  
                                                     throws RemoteException {
-        User user = reverseNotifyEnabledClientInterfaces.remove(clientInterface);
-        Set<ClientNotifyEventInterface> cneiSet = notifyEnabledClientInterfaces.get(user);
-        if ( cneiSet!=null && cneiSet.remove(clientInterface) )
-            System.out.println("Client unregistered");
-        else
+        String username = reverseNotifyEnabledClientInterfaces.remove(clientInterface);
+        if(username == null){
             System.out.println("Unable to unregister client");
+            return;
+        }
+        notifyEnabledClientInterfaces.remove(username);
+        System.out.println("Client unregistered");
+    }
+
+    public void safeUnregisterForCallback(String username){
+        ClientNotifyEventInterface clientInterface = notifyEnabledClientInterfaces.remove(username);
+        if(clientInterface==null){
+            System.out.println("Unable to unregister client");
+            return;
+        }
+        reverseNotifyEnabledClientInterfaces.remove(clientInterface);
+        System.out.println("Client unregistered");
     }
 
     /*
-     * notifica di una variazione di valore dell'azione
-     * /* quando viene richiamato, fa il callback a tutti i client
-     * registrati
+     * Send user followers list to user
      */
-    public synchronized void updateFollowersList() throws RemoteException {
-        System.out.println("Starting callbacks.");
-        String[] mock = {"test", "test2"};
-        Collection<Set<ClientNotifyEventInterface>> coll = notifyEnabledClientInterfaces.values();
-        Iterator<Set<ClientNotifyEventInterface>> i = coll.iterator();
-        while (i.hasNext()) { // foreach set of ClientNotifyEventInterface
-            Iterator<ClientNotifyEventInterface> clientsIterator = i.next().iterator();
-            while (clientsIterator.hasNext()) { // foreach ClientNotifyEventInterface in this set
-                ClientNotifyEventInterface client = clientsIterator.next();
-                try {
-                    client.newFollowersList(mock);
-                } catch (Exception e) {
-                    clientsIterator.remove();
-                    e.printStackTrace();
-                }
-            }
-            
+    public synchronized void updateFollowersList(User user) throws RemoteException {
+        ClientNotifyEventInterface clientInterface = notifyEnabledClientInterfaces.get(user.getUsername());
+        try {
+            clientInterface.newFollowersList(user.getFollowers());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        System.out.println("Callbacks complete.");
     }
 }

@@ -3,12 +3,15 @@ package social.password;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 /**
  * Serialize this means serialize every function inside every password.
  * Need static functions outside and this class will only call them from here
  * 
  */
+@NoArgsConstructor
 public @Data class Password implements java.io.Serializable, Comparable<Password>{
     private String hashedPwd;
 

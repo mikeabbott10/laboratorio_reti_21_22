@@ -2,7 +2,9 @@ package social;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.sql.Date;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonFilter;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import server.util.Constants;
 import social.password.Password;
 
 @NoArgsConstructor
@@ -24,7 +27,7 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
     private HashSet<String> followers; // users who follow this
     private HashSet<String> following; // users this follows
     private double wallet;
-    private Map<Date, Integer> walletHistory;
+    private Set<WalletTransaction> walletHistory;
     
     public User(SocialService social, String username, String password, String[] tags) 
                         throws NoSuchAlgorithmException, InvalidKeySpecException{
@@ -33,14 +36,14 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
         // tags
         this.tags = tags;
         for (String tag : this.tags) {
-            social.getTagsUsers().putIfAbsent(tag, new HashSet<User>());
-            social.getTagsUsers().get(tag).add(this);
+            social.getTagsUsers().putIfAbsent(tag, new HashSet<String>());
+            social.getTagsUsers().get(tag).add(this.username);
         }
         this.posts = new HashSet<>();
         this.followers = new HashSet<>();
         this.following = new HashSet<>();
         this.wallet = 0;
-        this.walletHistory = new ConcurrentHashMap<>();
+        this.walletHistory = ConcurrentHashMap.newKeySet();
     }
 
     public boolean addPost(int postId) {
@@ -63,6 +66,15 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
         this.following.remove(username);
     }
 
+    public void updateWallet(double amountToAdd) {
+        this.wallet+=amountToAdd;
+        // save transaction
+        this.walletHistory.add(new WalletTransaction(
+            Constants.DATE_FORMAT.format(Timestamp.valueOf(LocalDateTime.now())), 
+            amountToAdd)
+        );
+    }
+
     @Override 
     public boolean equals(Object u2){
         if(u2 == null)
@@ -79,5 +91,5 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
     public int hashCode() {
         return this.username.hashCode();
     }
-    
+
 }

@@ -24,7 +24,6 @@ public class JacksonUtil {
             .addFilter(filterName, theFilter);
         var objectMapper = new ObjectMapper();
         return objectMapper.writer(filters).writeValueAsString(obj);
-        
     }
 
     public static String getStringFromObject(Object obj) 

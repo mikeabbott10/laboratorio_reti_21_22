@@ -2,11 +2,19 @@ package database;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap.KeySetView;
 
+import exceptions.AlreadyConnectedException;
 import exceptions.DatabaseException;
-import social.*;
+import exceptions.ForbiddenActionException;
+import exceptions.ResourceNotFoundException;
+import social.Post;
+import social.SocialService;
+import social.User;
 
 /**
  * The database implementation. It's just a simulator.
@@ -19,7 +27,7 @@ public class DatabaseImpl implements Database{
         this.social= social;
     }
 
-    //#region Backend
+    //#region
     /**
      * query simulation:
      *      SELECT * FROM users U WHERE U.Username=username
@@ -29,6 +37,11 @@ public class DatabaseImpl implements Database{
     @Override
     public User getUser(String username){
         return social.getUsers().get(username);
+    }
+
+    @Override
+    public ConcurrentHashMap<String, User> getUsers() {
+        return social.getUsers();
     }
 
     /**
@@ -77,21 +90,21 @@ public class DatabaseImpl implements Database{
      *      DELETE FROM posts P WHERE P.id=postID;
      * @param user the author of the post
      * @param postID the post id
-     * @return true if the post is removed
+     * @throws ResourceNotFoundException
      */
     @Override
-    public boolean removePost(User user, int postID){
+    public void removePost(User user, int postID) 
+            throws ResourceNotFoundException{
         if( user.getPosts().remove(postID) == false )
-            return false; // postID is not a post from user
+            throw new ResourceNotFoundException("Post not found");
         Post p = social.getPosts().remove(postID);
         if( p != null ){
             p.getRewinnedBy().forEach((String username) -> {
                 social.getUsers().get(username).getPosts().remove(postID);
             });
-            return true;
+            return;
         }
-        assert true == false; // never here
-        return false; // postID is not a post from user
+        throw new ResourceNotFoundException("Post not found");
     }
 
     /**
@@ -160,50 +173,166 @@ public class DatabaseImpl implements Database{
         return users;
     }
 
-    /**
-     * query simulation:
-     *      INSERT INTO comments (PostID, Comment, Author) VALUES (postID, content, author);
-     */
     @Override
-    public void addComment(int postID, String comment, String author){
+    public void addLoggedUser(String username) throws AlreadyConnectedException{
+        if( !social.getLoggedUsers().add(username) ){
+            throw new AlreadyConnectedException();
+        }
+    }
+
+    @Override
+    public void removeLoggedUser(String username) {
+        social.getLoggedUsers().remove(username);
+    }
+
+    @Override
+    public ConcurrentHashMap<Integer, KeySetView<String, Boolean>> getNewUpvotes() {
+        return social.getNewUpvotes();
+    }
+
+    @Override
+    public ConcurrentHashMap<Integer, KeySetView<String, Boolean>> getNewDownvotes() {
+        return social.getNewDownvotes();
+    }
+
+    @Override
+    public ConcurrentHashMap<Integer, KeySetView<String, Boolean>> getNewComments() {
+        return social.getNewComments();
+    }
+
+    @Override
+    public ConcurrentHashMap<Integer, Post> getPosts() {
+        return social.getPosts();
+    }
+
+    @Override
+    public Object getSocialInstance() {
+        return social;
+    }
+
+    //#endregion  
+
+    //#region PUT request works
+
+    // /post
+    @Override
+    public synchronized void addComment(int postID, String comment, String author) 
+            throws ResourceNotFoundException, ForbiddenActionException{
+        checkPostUserInteractionValidity(postID, author);
         social.getPosts().get(postID).addComment(author, comment);
+        social.getNewComments().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
+        social.getNewComments().get(postID).add(author);
     }
 
     @Override
-    public void rewinPost(int postId, String author) {
-        
+    public synchronized void rewinPost(int postID, String rewinner) 
+            throws ResourceNotFoundException, ForbiddenActionException {
+        checkPostUserInteractionValidity(postID, rewinner);
+        social.getUsers().get(rewinner).getPosts().add(postID);
+        social.getPosts().get(postID).getRewinnedBy().add(rewinner);
+    }
+    
+    @Override
+    public synchronized void addVoteTo(int postID, String username) 
+            throws ResourceNotFoundException, ForbiddenActionException {
+        checkPostUserInteractionValidity(postID, username);
+        social.getPosts().get(postID).addVote(username);
+        social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
+        social.getNewUpvotes().get(postID).add(username);
     }
 
     @Override
-    public void addFollowerTo(String username, String userToFollow) {
+    public synchronized void addDownvoteTo(int postID, String username) 
+            throws ResourceNotFoundException, ForbiddenActionException {
+        checkPostUserInteractionValidity(postID, username);
+        social.getPosts().get(postID).addDownVote(username);
+        social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
+        social.getNewDownvotes().get(postID).add(username);
+    }
+
+    // /user
+    @Override
+    public synchronized void addFollowerTo(String username, String userToFollow) 
+            throws ResourceNotFoundException {
+        if( social.getUsers().get(username)==null || social.getUsers().get(userToFollow)==null )
+            throw new ResourceNotFoundException("User does not exist.");
         social.getUsers().get(userToFollow).addFollower(username);
         social.getUsers().get(username).addFollowing(userToFollow);
     }
 
     @Override
-    public void removeFollowerTo(String username, String userToUnfollow) {
+    public void removeFollowerTo(String username, String userToUnfollow) 
+            throws ResourceNotFoundException {
+        if( social.getUsers().get(username)==null || social.getUsers().get(userToUnfollow)==null )
+            throw new ResourceNotFoundException("User does not exist.");
         social.getUsers().get(userToUnfollow).removeFollower(username);
         social.getUsers().get(username).removeFollowing(userToUnfollow);
     }
+    //#endregion
 
-    @Override
-    public void addVoteTo(int postID, String username) {
-        social.getPosts().get(postID).addVote(username);
-        
+    //#region private DB functions
+    /**
+     * Check if the Post p is in user 's feed
+     *
+     * @param user
+     * @param p
+     * @return
+     */
+    private boolean checkFeed(User user, Post p) {
+        if (!user.getFollowing().contains(p.getAuthor()) && 
+                Collections.disjoint(user.getFollowing(), p.getRewinnedBy()) == true)
+            return false;
+        return true;
     }
 
-    @Override
-    public void addDownvoteTo(int postID, String username) {
-        social.getPosts().get(postID).addDownVote(username);
-        
+    /**
+     * Check if the post and the user exist in social and check if user can interact with post
+     * @param postID
+     * @param username
+     * @throws ResourceNotFoundException
+     * @throws ForbiddenActionException
+     */
+    private void checkPostUserInteractionValidity(int postID, String username) 
+            throws ResourceNotFoundException, ForbiddenActionException{
+        Post post = social.getPosts().get(postID);
+        if( post==null )
+            throw new ResourceNotFoundException("Post not found.");
+        User user = social.getUsers().get(username);
+        if( user==null )
+            throw new ResourceNotFoundException("User not found.");
+        if( !checkFeed(user, post) && !post.getAuthor().equals(username)){
+            // user can do an action on a post only if the post is in its feed or it's his own post
+            // reject here
+            throw new ForbiddenActionException();
+        }
     }
-
 
     //#endregion
 
+    //#region reward calculation
+    @Override
+    public void removeIdFromNewUpvotes(Integer id) {
+        social.getNewUpvotes().remove(id);
+    }
 
-    //#region middleware
-    
+    @Override
+    public void removeIdFromNewDownvotes(Integer id) {
+        social.getNewDownvotes().remove(id);
+    }
+
+    @Override
+    public void removeIdFromNewComments(Integer id) {
+        social.getNewComments().remove(id);
+    }
+
+    @Override
+    public synchronized void updateUserWallet(String username, double amountToAdd) 
+            throws ResourceNotFoundException {
+        User user = social.getUsers().get(username);
+        if(user==null)
+            throw new ResourceNotFoundException("User not found.");
+        user.updateWallet(amountToAdd);
+    }
+
     //#endregion
-    
 }

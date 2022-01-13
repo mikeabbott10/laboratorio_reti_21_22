@@ -4,20 +4,20 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/**
- * Invariant: ( rewinnedPost!=null && isEmpty(upvotes) && isEmpty(downvotes) ) == true
- */
+@NoArgsConstructor
 public @Data class Post implements Comparable<Post> {
-    private final long id;
+    private long id;
     private String title;
     private String content;
     private String author;
-    private final Date date;
+    private Date date;
     private Set<String> upvotes;
     private Set<String> downvotes;
     private Map<String, HashSet<PostComment>> comments;
     private Set<String> rewinnedBy;
+    private int postAge; // the times reward calculation is applied on this post
 
     public Post(long id, String title, String content, String author) {
         this.id = id;
@@ -29,6 +29,7 @@ public @Data class Post implements Comparable<Post> {
         this.date = Calendar.getInstance().getTime();
         this.upvotes = ConcurrentHashMap.newKeySet();
         this.downvotes = ConcurrentHashMap.newKeySet();
+        this.postAge = 0;
         
     }
 

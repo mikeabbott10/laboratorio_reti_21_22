@@ -1,33 +1,38 @@
 package server.util;
 
+import java.text.SimpleDateFormat;
+
 /**
  * A simple container for various constants.
  */
 public interface Constants {
+    // rmi
+    static final int SERVER_RMI_PORT = 25258;
+    static final String SERVER_IP = "localhost";
+    static final String serverUrl = "rmi://"+ SERVER_IP +":" + SERVER_RMI_PORT;
+    static final String rmiServiceName = "/winsomeservice";
 
+    //tcp
+    static final int HTTP_SERVER_PORT = 8080;
+    static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");;
+    //http
     String[] SUPPORTED_HTTP_METHODS = {"GET", "POST", "PUT", "DELETE"};
     String SUPPORTED_HTTP_VERSION = "HTTP/1.1";
 
-    long SHUTDOWN_TIMEOUT_MILLIS = 10000L;
+    //multicast
+    int MULTICAST_PORT = 40000;
+    String MULTICAST_ADDRESS = "239.255.1.3";
+
+    double AUTHOR_PERCENTAGE = 0.7;
+    String BACKUP_DIRECTORY = "./server/bkp/";
+    long REWARD_TIMEOUT = 10000L;
+    long BACKUP_TIMEOUT = 10000L;
 
     int SOCKET_READ_DATA_LIMIT_BYTES = 32768;
     int SOCKET_READ_BUFFER_SIZE_BYTES = 8192;
-    int FILE_READ_BUFFER_SIZE_BYTES = 8192;
 
-    String SETTINGS_FILE_DEFAULT = "settings.properties";
-
-    String SETTINGS_PORT = "port";
-    String SETTINGS_WWW_ROOT = "www_root";
-    String SETTINGS_SESSION_TIMEOUT_SECS = "session_timeout_secs";
-    String SETTINGS_MAX_CONNECTIONS = "max_connections";
-
-    int SETTINGS_PORT_DEFAULT = 8080;
-    String SETTINGS_WWW_ROOT_DEFAULT = "";
-    int SETTINGS_SESSION_TIMEOUT_SECS_DEFAULT = 30;
-    int SETTINGS_MAX_CONNECTIONS_DEFAULT = 10000;
 
     enum HttpStatus {
-
         SUCCESS(200, "OK"),
         BAD_REQUEST(400, "Bad Request"),
         FORBIDDEN(403, "Forbidden"),

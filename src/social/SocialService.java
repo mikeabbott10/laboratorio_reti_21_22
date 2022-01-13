@@ -1,40 +1,37 @@
 package social;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Data;
 
-
-public @Data class SocialService {
+public @Data class SocialService implements java.io.Serializable{
     private ConcurrentHashMap<String, User> users; // users in the social network
+    private ConcurrentHashMap<Integer, Post> posts; // post in the social network
+    public int postIdCounter; // id counter of posts in social network
+    private ConcurrentHashMap<String, HashSet<String>> tagsUsers; // tag name to usernames
 
-    public int postIdCounter;
-    private HashSet<String> activeUsernames;
-    private HashMap<String, HashSet<User>> tagsUsers;
-    private HashMap<Integer, Post> posts;
+    private Set<String> loggedUsers;
 
-    // these are consumed by the reward algorithm
-    private HashMap<Integer, HashSet<String>> newUpvotes;
-    private HashMap<Integer, HashSet<String>> newDownvotes;
-    private HashMap<Integer, ArrayList<String>> newComments;
+    // for reward calculation
+    private ConcurrentHashMap<Integer, ConcurrentHashMap.KeySetView<String, Boolean>> newUpvotes;
+    private ConcurrentHashMap<Integer, ConcurrentHashMap.KeySetView<String, Boolean>> newDownvotes;
+    private ConcurrentHashMap<Integer, ConcurrentHashMap.KeySetView<String, Boolean>> newComments;
 
     // Constructors ----------------------------------------------------------------------------------
     public SocialService(ConcurrentHashMap<String, User> users, Set<String> tags, int postIdCounter, 
-            HashSet<String> activeUsernames, 
-            HashMap<String, HashSet<User>> tagsUsers, 
-            HashMap<Integer, Post> posts,
-            HashMap<Integer, HashSet<String>> newUpvotes, 
-            HashMap<Integer, HashSet<String>> newDownvotes,
-            HashMap<Integer, ArrayList<String>> newComments) {
+            ConcurrentHashMap<String, HashSet<String>> tagsUsers, 
+            ConcurrentHashMap<Integer, Post> posts,
+            ConcurrentHashMap.KeySetView<String, Boolean> loggedUsers,
+            ConcurrentHashMap<Integer, ConcurrentHashMap.KeySetView<String, Boolean>> newUpvotes, 
+            ConcurrentHashMap<Integer, ConcurrentHashMap.KeySetView<String, Boolean>> newDownvotes,
+            ConcurrentHashMap<Integer, ConcurrentHashMap.KeySetView<String, Boolean>> newComments) {
         this.users = users;
         this.postIdCounter = postIdCounter;
-        this.activeUsernames = activeUsernames;
         this.tagsUsers = tagsUsers;
         this.posts = posts;
+        this.loggedUsers = loggedUsers;
         this.newUpvotes = newUpvotes;
         this.newDownvotes = newDownvotes;
         this.newComments = newComments;
@@ -46,12 +43,12 @@ public @Data class SocialService {
     public SocialService() {
         this.users = new ConcurrentHashMap<>();
         this.postIdCounter = 0;
-        this.activeUsernames = new HashSet<>();
-        this.tagsUsers = new HashMap<>();
-        this.posts = new HashMap<>();
-        this.newUpvotes = new HashMap<>();
-        this.newDownvotes = new HashMap<>();
-        this.newComments = new HashMap<>();
+        this.tagsUsers = new ConcurrentHashMap<>();
+        this.posts = new ConcurrentHashMap<>();
+        this.loggedUsers = ConcurrentHashMap.newKeySet();
+        this.newUpvotes = new ConcurrentHashMap<>();
+        this.newDownvotes = new ConcurrentHashMap<>();
+        this.newComments = new ConcurrentHashMap<>();
     }
 
 }
