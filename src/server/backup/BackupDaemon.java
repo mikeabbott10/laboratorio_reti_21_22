@@ -10,16 +10,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 import server.util.Logger;
-
 import database.Database;
 import server.ServerMain;
-import server.util.Constants;
 
 public class BackupDaemon implements Runnable{
     private Logger LOGGER = new Logger(BackupDaemon.class.getName());
 
     private Database db;
-    public static File backupFile = new File(Constants.BACKUP_DIRECTORY+ "socialNetworkState.json");
+    public static File backupFile = new File(ServerMain.server_config.BACKUP_DIRECTORY+ "socialNetworkState.json");
 
     private Thread rewardThread;
     
@@ -37,7 +35,7 @@ public class BackupDaemon implements Runnable{
     public void run() {
         while (!ServerMain.quit && !Thread.currentThread().isInterrupted()) {
             try {
-                Thread.sleep(Constants.BACKUP_TIMEOUT);
+                Thread.sleep(ServerMain.server_config.BACKUP_TIMEOUT);
             } catch (InterruptedException ignored) {}
             if (!Thread.currentThread().isInterrupted()) {
                 backupRoutine();
@@ -49,25 +47,8 @@ public class BackupDaemon implements Runnable{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        backupRoutine();
+        backupRoutine(); // once more after all stopped
         return;
-    }
-
-    /**
-     * Creates files if they do not exist
-    */
-    private void createFiles(File[] files){
-        Arrays.asList(files).forEach((bkp) -> {
-            if (!bkp.exists()){
-                try {
-                    bkp.createNewFile();
-                    //LOGGER.info(bkp.getAbsolutePath());
-                } catch (IOException e) {
-                    LOGGER.warn("Error creating backup files");
-                    e.printStackTrace();
-                }
-            }
-        });
     }
 
     /**
@@ -85,6 +66,23 @@ public class BackupDaemon implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Creates files if they do not exist
+    */
+    private void createFiles(File[] files){
+        Arrays.asList(files).forEach((bkp) -> {
+            if (!bkp.exists()){
+                try {
+                    bkp.createNewFile();
+                    //LOGGER.info(bkp.getAbsolutePath());
+                } catch (IOException e) {
+                    LOGGER.warn("Error creating backup files");
+                    e.printStackTrace();
+                }
+            }
+        });
     }
     
 }

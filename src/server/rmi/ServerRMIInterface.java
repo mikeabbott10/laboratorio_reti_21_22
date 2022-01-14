@@ -2,7 +2,7 @@ package server.rmi;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-import client.ClientNotifyEventInterface;
+import client.rmi.ClientNotifyEventInterface;
 import exceptions.*;
 
 public interface ServerRMIInterface extends Remote{

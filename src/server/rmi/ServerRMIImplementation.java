@@ -9,10 +9,10 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import client.ClientNotifyEventInterface;
+import client.rmi.ClientNotifyEventInterface;
 import database.Database;
+import database.social.*;
 import exceptions.*;
-import social.*;
 
 public class ServerRMIImplementation extends RemoteServer implements ServerRMIInterface {
     private final Database db;

@@ -3,12 +3,12 @@ package database;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+import database.social.Post;
+import database.social.User;
 import exceptions.AlreadyConnectedException;
 import exceptions.DatabaseException;
 import exceptions.ForbiddenActionException;
 import exceptions.ResourceNotFoundException;
-import social.Post;
-import social.User;
 
 public interface Database {
     public User getUser(String username);
@@ -40,5 +40,6 @@ public interface Database {
     public Object getSocialInstance();
 	public void addLoggedUser(String username) throws AlreadyConnectedException;
     public void removeLoggedUser(String username);
+    public int updateRewardIterations();
     
 }

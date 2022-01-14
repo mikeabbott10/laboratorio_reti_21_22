@@ -12,6 +12,8 @@ import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import database.Database;
+import database.social.Post;
+import database.social.User;
 import exceptions.AlreadyConnectedException;
 import exceptions.DatabaseException;
 import exceptions.ForbiddenActionException;
@@ -26,8 +28,6 @@ import server.nio.CustomRequest;
 import server.rmi.ServerRMIImplementation;
 import server.util.JacksonUtil;
 import server.util.Logger;
-import social.Post;
-import social.User;
 
 public class HttpRequestHandler {
     private static final Logger LOGGER = new Logger(HttpRequestHandler.class.getName());

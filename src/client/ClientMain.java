@@ -17,6 +17,8 @@ import java.util.HashMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import client.rmi.ClientNotifyEventImplementation;
+import client.rmi.ClientNotifyEventInterface;
 import server.rmi.ServerRMIInterface;
 
 public class ClientMain {
@@ -33,12 +35,11 @@ public class ClientMain {
 
     public static void main(String args[]){
         // RMI
-        try {
-
-            // System.out.println("Looking for server");
+        try {// once more after all stopped
+            // Looking for server
             ServerRMIInterface serverRMIObj = (ServerRMIInterface) Naming.lookup(serverUrl + rmiServiceName);
 
-            // System.out.println("Registering for callback");
+            // Registering for callback
             ClientNotifyEventInterface callbackObj = new ClientNotifyEventImplementation();
             ClientNotifyEventInterface stub = 
                 (ClientNotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
@@ -46,17 +47,14 @@ public class ClientMain {
             serverRMIObj.register(nomeUtenteProvvisorio, passUtenteProvvisoria, new String[]{"art","cinema"});
             serverRMIObj.registerForCallback(stub, nomeUtenteProvvisorio, passUtenteProvvisoria);
 
-            // attende gli eventi generati dal server per
-            // un certo intervallo di tempo;
-            //Thread.sleep (10000);
-
-            // System.out.println("Unregistering for callback");
+            // Unregistering for callback
             serverRMIObj.unregisterForCallback(stub);
         } catch (Exception e){ 
             e.printStackTrace();
             System.err.println("Client exception:"+ e.getMessage());
         }
 
+        //HTTP
         try {
             var post = new HashMap<String, String>() {{
                 put("title", "TITOLONE");

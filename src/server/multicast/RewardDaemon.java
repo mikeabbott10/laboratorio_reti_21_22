@@ -15,35 +15,32 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import database.Database;
+import database.social.Post;
+import database.social.User;
 import exceptions.ResourceNotFoundException;
 import server.ServerMain;
-import server.util.Constants;
 import server.util.Logger;
-import social.Post;
-import social.User;
 
 public class RewardDaemon implements Runnable{
     private Logger LOGGER = new Logger(RewardDaemon.class.getName());
     private Database db;
-    private int rewardPerformedIterations;
     private Thread nioThread;
 
     public RewardDaemon(Thread nioThread, Database db){
         this.nioThread = nioThread;
         this.db = db;
-        this.rewardPerformedIterations = 0;
     }
 
 
     @Override
     public void run() {
-        try (DatagramSocket skt = new DatagramSocket(Constants.MULTICAST_PORT)) {
+        try (DatagramSocket skt = new DatagramSocket(ServerMain.server_config.MULTICAST_PORT)) {
             while (!Thread.currentThread().isInterrupted() && !ServerMain.quit ) {
                 byte[] msg = "Rewards calculated".getBytes();
                 try {
                     DatagramPacket datagram = new DatagramPacket(msg, msg.length,
-                        InetAddress.getByName(Constants.MULTICAST_ADDRESS),
-                        Constants.MULTICAST_PORT);
+                        InetAddress.getByName(ServerMain.server_config.MULTICAST_ADDRESS),
+                        ServerMain.server_config.MULTICAST_PORT);
                     skt.send(datagram);
                 } catch (UnknownHostException | SocketException e) {
                     // packet or socket error
@@ -54,7 +51,7 @@ public class RewardDaemon implements Runnable{
                 }
                 rewardCalculator();
                 try {
-                    Thread.sleep(Constants.REWARD_TIMEOUT);
+                    Thread.sleep(ServerMain.server_config.REWARD_TIMEOUT);
                 } catch (InterruptedException ignored){}
             }
             try {
@@ -71,19 +68,13 @@ public class RewardDaemon implements Runnable{
     }
 
     /**
-     * Algorithm to calculate winsome's rewards based on post interactions.
-     * Iterates on every modified post since the last time the algorithm ran,
-     * avoiding unmodified posts;
-     * to achieve this, it "consumes" three maps ( modifiedPostID ->
-     * {usersWhoInteracted}).
+     * Calculate user rewards, using 3 maps of new post iterations since the last 
+     * run of the calculator.
      * 
-     * To avoid iterating also on unmodified posts to increment their "age", we save
-     * the number of times the reward algorithm has ran in the post
-     * at its creation, so that post.age := {current reward algorithm iterations} -
-     * {reward algorithm iterations at post's creation}
+     * post.postAge = rewardLifeIterations (now) - rewardLifeIterations at post creation
      */
     public void rewardCalculator() {
-        rewardPerformedIterations++;
+        int rewardLifeIterations = db.updateRewardIterations();
 
         ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newUpvotes = db.getNewUpvotes();
         ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newDownvotes = db.getNewDownvotes();
@@ -98,8 +89,7 @@ public class RewardDaemon implements Runnable{
 
         // foreach post with new interactions
         modifiedPosts.forEach((id) -> {
-            if (posts.containsKey(id)) { 
-                // the post still exists
+            if (posts.containsKey(id)) { // post still exists
                 boolean anyUpvotes = newUpvotes.containsKey(id);
                 boolean anyDownvotes = newDownvotes.containsKey(id);
                 boolean anyComments = newComments.containsKey(id);
@@ -109,37 +99,32 @@ public class RewardDaemon implements Runnable{
                 int downvotes = anyDownvotes ? newDownvotes.get(id).size() : 0;
 
                 // count duplicates and get the number of comments for each "commenting" user, if any
-                HashMap<String, Integer> nCommentsForEachUser = new HashMap<String, Integer>();
+                HashMap<String, Integer> user_to_comment_number_map = new HashMap<String, Integer>();
                 if(newComments.containsKey(id)){
-                    nCommentsForEachUser = (HashMap<String, Integer>) newComments.get(id).stream()
-                        .collect(Collectors.toMap(Function.identity(), v -> 1, Integer::sum));
+                    user_to_comment_number_map = (HashMap<String, Integer>) newComments.get(id).stream()
+                        .collect(Collectors.toMap(Function.identity(), val -> 1, Integer::sum));
                 }
 
                 // now apply the formula to each user and calculate the sum
-                var wrapper = new Object() {
-                    Double sum = 0.0;
+                var sumWrapper = new Object() {
+                    double sum = 0.0;
                 };
-                nCommentsForEachUser.forEach((user, cp) -> {
-                    wrapper.sum += 2 / (1 + Math.pow(Math.E, -(cp - 1)));
+                user_to_comment_number_map.forEach((user, cp) -> {
+                    sumWrapper.sum += 2 / (1 + Math.pow(Math.E, -(cp - 1)));
                 });
 
                 Post post = posts.get(id);
-                double reward = (Math.log(Math.max(upvotes - downvotes, 0) + 1) + Math.log(wrapper.sum + 1))
-                        / (rewardPerformedIterations - post.getPostAge());
+                double reward = (Math.log(Math.max(upvotes - downvotes, 0) + 1) + Math.log(sumWrapper.sum + 1))
+                        / (rewardLifeIterations - post.getPostAge());
 
                 
                 // author reward
                 if (users.containsKey(post.getAuthor())) {
                     try {
-                        db.updateUserWallet(post.getAuthor(), reward*Constants.AUTHOR_PERCENTAGE);
+                        db.updateUserWallet(post.getAuthor(), reward*ServerMain.server_config.AUTHOR_PERCENTAGE);
                     } catch (ResourceNotFoundException e) {
-                        LOGGER.warn(e.getMessage());
-                        e.printStackTrace();
-                        modifiedPosts.remove(id);
-                        db.removeIdFromNewUpvotes(id);
-                        db.removeIdFromNewDownvotes(id);
-                        db.removeIdFromNewComments(id);
-                        return; // skip to the next post
+                        // LOGGER.info(e.getMessage());
+                        // e.printStackTrace();
                     }
                 }
 
@@ -154,11 +139,10 @@ public class RewardDaemon implements Runnable{
 
                 curators.stream().filter(u -> users.containsKey(u)).forEach((username) -> {
                     try {
-                        db.updateUserWallet(username, reward / curators.size() * (1 - Constants.AUTHOR_PERCENTAGE));
+                        db.updateUserWallet(username, reward / curators.size() * (1 - ServerMain.server_config.AUTHOR_PERCENTAGE));
                     } catch (ResourceNotFoundException e) {
-                        LOGGER.warn(e.getMessage());
-                        e.printStackTrace();
-                        return; // skip to the next user
+                        // LOGGER.info(e.getMessage());
+                        // e.printStackTrace();
                     }
 
                     // we must use curators.size to avoid counting duplicates

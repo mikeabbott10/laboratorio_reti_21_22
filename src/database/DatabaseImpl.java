@@ -8,13 +8,13 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap.KeySetView;
 
+import database.social.Post;
+import database.social.SocialService;
+import database.social.User;
 import exceptions.AlreadyConnectedException;
 import exceptions.DatabaseException;
 import exceptions.ForbiddenActionException;
 import exceptions.ResourceNotFoundException;
-import social.Post;
-import social.SocialService;
-import social.User;
 
 /**
  * The database implementation. It's just a simulator.
@@ -183,6 +183,16 @@ public class DatabaseImpl implements Database{
     @Override
     public void removeLoggedUser(String username) {
         social.getLoggedUsers().remove(username);
+    }
+
+    /**
+     * add 1 to reward routine age.
+     */
+    @Override
+    public int updateRewardIterations() {
+        social.setRewardRoutineAge(social.getRewardRoutineAge()+1);
+        return social.getRewardRoutineAge();
+        
     }
 
     @Override
