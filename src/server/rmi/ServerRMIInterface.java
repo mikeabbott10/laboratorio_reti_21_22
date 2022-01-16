@@ -7,9 +7,9 @@ import exceptions.*;
 
 public interface ServerRMIInterface extends Remote{
         
-    void register(String username, String password, String[] tags) 
+    public String register(String username, String password, String[] tags) 
                 throws RemoteException, TooManyTagsException,
-                        InvalidUsername, InvalidTags, DatabaseException;
+                        InvalidUsername, DatabaseException;
 
     public void registerForCallback(ClientNotifyEventInterface cInt, String username, String password) 
                 throws RemoteException, AlreadyConnectedException, DatabaseException, LoginException;

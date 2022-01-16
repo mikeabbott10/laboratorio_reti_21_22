@@ -4,8 +4,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
+
 import lombok.Data;
 
+@JsonFilter("socialFilter") // ignore some field serializing with this filter name
 public @Data class SocialService implements java.io.Serializable{
     private int rewardRoutineAge;
 

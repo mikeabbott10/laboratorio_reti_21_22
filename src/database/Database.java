@@ -15,7 +15,7 @@ public interface Database {
     public User getAllowedUser(String username, String password) throws DatabaseException;
     public User addNewUser(String username, String password, String[] tags) throws DatabaseException;
     
-    public int createPost(String title, String content, String author) throws DatabaseException;
+    public int createPost(String title, String content, String author) throws DatabaseException, ForbiddenActionException;
     public void removePost(User user, int postID) throws ResourceNotFoundException;
 
     public void rewinPost(int postID, String author) throws ResourceNotFoundException, ForbiddenActionException;

@@ -3,7 +3,6 @@ package server;
 import java.rmi.RemoteException;
 import java.rmi.registry.*;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetAddress;

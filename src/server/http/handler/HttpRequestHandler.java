@@ -5,7 +5,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.rmi.RemoteException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,7 +24,6 @@ import server.http.request.HttpRequest;
 import server.http.response.HttpResponse;
 import server.http.response.HttpResponseFactory;
 import server.nio.CustomRequest;
-import server.rmi.ServerRMIImplementation;
 import server.util.JacksonUtil;
 import server.util.Logger;
 
@@ -232,6 +230,8 @@ public class HttpRequestHandler {
                 String responseMessage = JacksonUtil.getStringFromObject( 
                     new HashMap<String, String>() {{
                         put("message", "Login performed.");
+                        put("multicast_group_ip", ServerMain.server_config.MULTICAST_ADDRESS);
+                        put("multicast_group_port", Integer.toString(ServerMain.server_config.MULTICAST_PORT) );
                     }}
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
@@ -279,7 +279,12 @@ public class HttpRequestHandler {
         try{
             TitleContent postProperties = 
                 (TitleContent) JacksonUtil.getObjectFromString(request.getBody(), TitleContent.class);
-            int postID = db.createPost( postProperties.title, postProperties.content, user.getUsername());
+            int postID;
+            try{
+                postID = db.createPost( postProperties.title, postProperties.content, user.getUsername());
+            }catch(ForbiddenActionException e){
+                return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+            }
             // post created
             String responseMessage = JacksonUtil.getStringFromObject( 
                 new HashMap<String, Integer>() {{

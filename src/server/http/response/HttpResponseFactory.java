@@ -57,13 +57,4 @@ public final class HttpResponseFactory {
         return response;
     }
 
-    /*public HttpResponse buildFileResponse(FileMetadata metadata) {
-        HttpResponse response = new HttpResponse();
-        response.setCode(HttpStatus.SUCCESS.code);
-        response.setReason(HttpStatus.SUCCESS.reason);
-        response.setContentLength(metadata.getSize());
-        response.addDefaultHeaders();
-        return response;
-    }*/
-
 }

@@ -19,7 +19,7 @@ public @Data class Post implements Comparable<Post> {
     private Set<String> rewinnedBy;
     private int postAge; // the current rewardAlgorithm
 
-    public Post(long id, String title, String content, String author) {
+    public Post(long id, String title, String content, String author, int rewardCalculatorAge) {
         this.id = id;
         this.title = title;
         this.content = content;
@@ -29,7 +29,7 @@ public @Data class Post implements Comparable<Post> {
         this.date = Calendar.getInstance().getTime();
         this.upvotes = ConcurrentHashMap.newKeySet();
         this.downvotes = ConcurrentHashMap.newKeySet();
-        this.postAge = 0;
+        this.postAge = rewardCalculatorAge;
         
     }
 

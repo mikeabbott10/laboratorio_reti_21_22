@@ -1,17 +1,28 @@
 package client.util;
 
+import java.io.File;
+import java.text.SimpleDateFormat;
+
 public class Constants {
-    // rmi
-    static final int SERVER_RMI_PORT = 25258;
-    static final String SERVER_IP = "localhost";
-    static final String RMIServerUrl = "rmi://"+ SERVER_IP +":" + SERVER_RMI_PORT;
-    static final String rmiServiceName = "/winsomeservice";
+    static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");;
 
-    //http
-    static final int HTTP_SERVER_PORT = 8080;
+    public static File CONFIG_FILE_PATH = new File("./client/clientConfig.json");
 
-    //multicast
-    int MULTICAST_PORT = 40000;
-    // IPV4: indirizzo di un gruppo è un indirizzo in classe D [224.0.0.0 – 239.255.255.255]
-    String MULTICAST_ADDRESS = "239.255.1.3"; // [239.0.0.0 - 239.255.255.255] : Local multicast addresses
+    enum HttpStatus {
+        SUCCESS(200, "OK"),
+        BAD_REQUEST(400, "Bad Request"),
+        FORBIDDEN(403, "Forbidden"),
+        REQUEST_TIMEOUT(408, "Request Timeout"),
+        TOO_MANY_REQUESTS(429, "Too Many Requests"),
+        NOT_FOUND(404, "Not Found");
+
+        public final int code;
+        public final String reason;
+
+        HttpStatus(int code, String reason) {
+            this.code = code;
+            this.reason = reason;
+        }
+
+    }
 }

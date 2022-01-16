@@ -114,11 +114,16 @@ public class DatabaseImpl implements Database{
      * @param content
      * @param author the username of the author
      * @throws DatabaseException
+     * @throws ForbiddenActionException
      */
     @Override
-    public int createPost(String title, String content, String author) throws DatabaseException{
+    public int createPost(String title, String content, String author) throws DatabaseException, ForbiddenActionException{
+        if(content.length()>500 || title.length()>20){
+            //System.out.println("Title max length: 20 characters. Content max length: 500 characters.");
+            throw new ForbiddenActionException();
+        }
         int postId = social.postIdCounter++;
-        Post post = new Post(postId, title, content, author);
+        Post post = new Post(postId, title, content, author, social.getRewardRoutineAge());
         if( social.getUsers().get(author).addPost(postId) == false || 
                 social.getPosts().put(postId, post) != null )
             throw new DatabaseException();

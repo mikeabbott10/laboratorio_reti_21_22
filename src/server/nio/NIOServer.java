@@ -4,6 +4,7 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.net.*; 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import database.Database;
 import exceptions.DatabaseException;
@@ -25,16 +26,25 @@ public class NIOServer {
     private Selector selector;
     private Database db;
 
-    public Selector getSelector() {
-        return selector;
-    }
+    private final int workersAmount = 4;
+    private ArrayList<Thread> workers;
+
+    protected LinkedBlockingQueue<CustomRequest> requestList;
 
     public NIOServer(int port, Database db) {
         this.port = port;
         this.db = db;
+        this.requestList = new LinkedBlockingQueue<>();
+        this.workers = new ArrayList<>(workersAmount);
     }
 
+    public Selector getSelector() {
+        return selector;
+    }
+
+
     public void start(){
+        startWorkers();
         try( 
             ServerSocketChannel serverChannel = ServerSocketChannel.open() 
         ){
@@ -63,11 +73,9 @@ public class NIOServer {
                             // register the client SocketChannel to the selector with a
                             // focus on the read operation (we want to read something now) 
                             registerOp(selector, client, SelectionKey.OP_READ, null);
-    
                         }
                         else if (key.isWritable()) { // key channel is ready for being written
                             answerToClient(selector, key);
-    
                         }else if (key.isReadable()) { // key channel is ready for being read
                             readClientMessage(selector, key);
                         }
@@ -80,6 +88,7 @@ public class NIOServer {
         }catch (IOException ex) {
             ex.printStackTrace();
         }
+        joinWorkers();
     }
     
     /**
@@ -92,32 +101,12 @@ public class NIOServer {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         try{
             String raw = new RawRequestReader().readRaw(clientChannel);
-            //LOGGER.info("Raw req: \n"+ raw);
-            HttpResponse response = 
-                new HttpRequestHandler().handleRequest(this.db, 
-                        new CustomRequest(sel, clientChannel, raw, key));
-            if(response == null) return;
-
-            // answer to client
-            HttpResponseBuilder rb = new HttpResponseBuilder();
-            ByteBuffer headers = ByteBuffer.wrap(rb.buildHeaders(response));
-            ByteBuffer content = rb.buildContent(response);
-            //headers.flip(); content.flip(); flip errati qua perchè ByteBuffer.wrap lascia position a 0
-            ByteBuffer bb = ByteBuffer.allocate(headers.capacity() + content.capacity());
-            bb.put(headers).put(content); 
-            bb.flip();
-            registerOp(sel, clientChannel, SelectionKey.OP_WRITE, bb);
+            requestList.add(new CustomRequest(sel, clientChannel, raw, key));
         }catch(EndOfStreamException e){
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
-            cancelKeyAndCloseChannel(key);
-            e.printStackTrace();
-            LOGGER.warn(e.getMessage());
-        } catch (DatabaseException e) {
-            // GRAVE
             LOGGER.warn(e.getMessage());
         }
-
     }
 
     /**
@@ -167,6 +156,23 @@ public class NIOServer {
             key.channel().close();
         }catch(Exception ignored){}
         //LOGGER.info("chiuso");
+    }
+
+    private void startWorkers(){
+        for (int i = 0; i < workersAmount; i++) {
+			Thread t = new Thread(new NIOWorker(this, requestList, this.db));
+			workers.add(t);
+			t.start();
+		}
+    }
+    private void joinWorkers() {
+        for (int i = 0; i < workersAmount; i++){
+			try {
+				workers.get(i).join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			};
+		}
     }
 
 

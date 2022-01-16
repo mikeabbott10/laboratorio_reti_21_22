@@ -7,6 +7,7 @@ import java.util.Arrays;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 import server.util.Logger;
@@ -60,9 +61,12 @@ public class BackupDaemon implements Runnable{
         ObjectMapper mapper = new ObjectMapper(jsonFactory);
         mapper.enable(SerializationFeature.INDENT_OUTPUT); // indent the output decent way
         try {
-            SimpleFilterProvider no_filter_sfp = new SimpleFilterProvider();
-            no_filter_sfp.setFailOnUnknownId(false);
-            mapper.writer(no_filter_sfp).writeValue(backupFile, db.getSocialInstance());
+            SimpleBeanPropertyFilter theFilter = SimpleBeanPropertyFilter
+                .serializeAllExcept("loggedUsers");
+            SimpleFilterProvider filters = new SimpleFilterProvider()
+                .addFilter("socialFilter", theFilter);
+            filters.setFailOnUnknownId(false);
+            mapper.writer(filters).writeValue(backupFile, db.getSocialInstance());
         } catch (IOException e) {
             e.printStackTrace();
         }

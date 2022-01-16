@@ -4,9 +4,6 @@ import java.rmi.RemoteException;
 import java.rmi.server.RemoteServer;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import client.rmi.ClientNotifyEventInterface;
@@ -37,21 +34,20 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         this.reverseNotifyEnabledClientInterfaces = new ConcurrentHashMap<>();
     }
 
-
     @Override 
-    public void register(String username, String password, String[] tags) 
+    public String register(String username, String password, String[] tags) 
                                 throws RemoteException, InvalidUsername, 
-                                        TooManyTagsException, InvalidTags, DatabaseException{
+                                        TooManyTagsException, DatabaseException{
         if(username == null || password == null || tags == null) throw new NullPointerException();
-        
+
         // tags check
         if(tags.length > 5) throw new TooManyTagsException();
-        
+
         if( db.addNewUser(username.trim(), password, tags) != null ) // critical zone. Solved by ConcurrentHashMap
             throw new InvalidUsername("This name already exists.");
 
-        // debug
-        System.out.println("DEBUG New User registered: " + username + " " + password + " " + tags);
+        //System.out.println("New User registered: " + username + " " + password + " " + tags);
+        return "User "+ username + "registered.";
     }
 
     /** 
@@ -89,7 +85,6 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         if(user == null) throw new LoginException();
         return user;
     }
-
 
     /* rimuovi registrazione per callback */
     @Override 

@@ -29,6 +29,7 @@ public class HttpRequestValidator {
     protected final String userActionRouteDefinition = "/user/:userID/action/:actionID";
     protected final String postActionRouteDefinition = "/post/:postID/action/:actionID";
     protected final String logoutActionRouteDefinition = "/logout";
+    protected final String loginActionRouteDefinition = "/login";
 
 
     protected Map<String, String> GETPathValidation(HttpRequest request) {
@@ -54,6 +55,8 @@ public class HttpRequestValidator {
         }else if( (mappedPath = parsePath(request.getPath(), postActionRouteDefinition)) != null ){
             return mappedPath;
         }else if( (mappedPath = parsePath(request.getPath(), logoutActionRouteDefinition)) != null ){
+            return mappedPath;
+        }else if( (mappedPath = parsePath(request.getPath(), loginActionRouteDefinition)) != null ){
             return mappedPath;
         }
         return null;

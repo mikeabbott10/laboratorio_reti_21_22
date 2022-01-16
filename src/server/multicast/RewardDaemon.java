@@ -94,22 +94,23 @@ public class RewardDaemon implements Runnable{
                 boolean anyDownvotes = newDownvotes.containsKey(id);
                 boolean anyComments = newComments.containsKey(id);
 
-                // get the number of upvotes and downvotes
+                // number of upvotes and downvotes
                 int upvotes = anyUpvotes ? newUpvotes.get(id).size() : 0;
                 int downvotes = anyDownvotes ? newDownvotes.get(id).size() : 0;
 
-                // count duplicates and get the number of comments for each "commenting" user, if any
-                HashMap<String, Integer> user_to_comment_number_map = new HashMap<String, Integer>();
-                if(newComments.containsKey(id)){
-                    user_to_comment_number_map = (HashMap<String, Integer>) newComments.get(id).stream()
+                // number of comments for each user who commented the post
+                HashMap<String, Integer> user_to_comments_number_map = new HashMap<String, Integer>();
+                if(anyComments){
+                    user_to_comments_number_map = (HashMap<String, Integer>) newComments.get(id).stream()
                         .collect(Collectors.toMap(Function.identity(), val -> 1, Integer::sum));
                 }
 
-                // now apply the formula to each user and calculate the sum
+                // formula for each user
                 var sumWrapper = new Object() {
                     double sum = 0.0;
                 };
-                user_to_comment_number_map.forEach((user, cp) -> {
+                // sum calculation
+                user_to_comments_number_map.forEach((user, cp) -> {
                     sumWrapper.sum += 2 / (1 + Math.pow(Math.E, -(cp - 1)));
                 });
 
@@ -129,11 +130,12 @@ public class RewardDaemon implements Runnable{
                 }
 
                 // curator reward
-                HashSet<String> empty = new HashSet<String>(); // .flatMap handles null stream, but .of doesn't
-                // get all the users who interacted with the post
-                HashSet<String> curators = (HashSet<String>) Stream
-                        .of(anyUpvotes ? newUpvotes.get(id) : empty, anyDownvotes ? newDownvotes.get(id) : empty,
-                                anyComments ? new HashSet<String>(newComments.get(id)) : empty)
+                HashSet<String> empty = new HashSet<String>(); // null
+                // get the users who interacted with the post
+                HashSet<String> curators = (HashSet<String>) Stream.of(
+                        anyUpvotes ? newUpvotes.get(id) : empty,
+                        anyDownvotes ? newDownvotes.get(id) : empty,
+                        anyComments ? newComments.get(id) : empty)
                         .flatMap(u -> u.stream())
                         .collect(Collectors.toSet());
 
@@ -144,8 +146,6 @@ public class RewardDaemon implements Runnable{
                         // LOGGER.info(e.getMessage());
                         // e.printStackTrace();
                     }
-
-                    // we must use curators.size to avoid counting duplicates
                 });
 
             }
