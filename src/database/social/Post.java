@@ -2,11 +2,15 @@ package database.social;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+
+import com.fasterxml.jackson.annotation.JsonFilter;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
+@JsonFilter("postFilter") // ignore some field serializing with this filter name
 public @Data class Post implements Comparable<Post> {
     private long id;
     private String title;
@@ -15,7 +19,7 @@ public @Data class Post implements Comparable<Post> {
     private Date date;
     private Set<String> upvotes;
     private Set<String> downvotes;
-    private Map<String, HashSet<PostComment>> comments;
+    private ConcurrentSkipListSet<PostComment> comments; // concurrent sorted set
     private Set<String> rewinnedBy;
     private int postAge; // the current rewardAlgorithm
 
@@ -24,7 +28,7 @@ public @Data class Post implements Comparable<Post> {
         this.title = title;
         this.content = content;
         this.author = author;
-        this.comments = new ConcurrentHashMap<>();
+        this.comments = new ConcurrentSkipListSet<>();
         this.rewinnedBy = ConcurrentHashMap.newKeySet();
         this.date = Calendar.getInstance().getTime();
         this.upvotes = ConcurrentHashMap.newKeySet();
@@ -34,11 +38,8 @@ public @Data class Post implements Comparable<Post> {
     }
 
     public void addComment(String author, String comment){
-        if( !comments.containsKey(author) ){
-            comments.put(author, new HashSet<>());
-        }
-        // set of comments already instanciated
-        ((HashSet<PostComment>) comments.get(author)).add(new PostComment(author, comment));
+        PostComment pc = new PostComment(author, comment);
+        comments.add(pc);
     }
 
     public void addVote(String username) {

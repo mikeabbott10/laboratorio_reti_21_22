@@ -24,7 +24,8 @@ public class HttpRequestValidator {
     protected final String postSetRouteDefinition = "/post";
     protected final String postRouteDefinition = "/post/:postID";
     protected final String userPostsRouteDefinition = "/posts/:userID";
-    protected final String tagUsersRouteDefinition = "/users/:tagName";
+    protected final String tagUsersRouteDefinition = "/users";
+    protected final String feedRouteDefinition = "/feed";
 
     protected final String userActionRouteDefinition = "/user/:userID/action/:actionID";
     protected final String postActionRouteDefinition = "/post/:postID/action/:actionID";
@@ -43,6 +44,8 @@ public class HttpRequestValidator {
         }else if( (mappedPath = parsePath(request.getPath(), userPostsRouteDefinition)) != null ){
             return mappedPath;
         }else if( (mappedPath = parsePath(request.getPath(), tagUsersRouteDefinition)) != null ){
+            return mappedPath;
+        }else if( (mappedPath = parsePath(request.getPath(), feedRouteDefinition)) != null ){
             return mappedPath;
         }
         return null;

@@ -6,6 +6,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.rmi.RemoteException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -94,7 +95,7 @@ public class HttpRequestHandler {
                     new HttpResponseFactory().buildBadRequest("Cannot follow yourself.");
                 if( db.getUser(mappedPath.get("userID"))==null )
                     new HttpResponseFactory().buildNotFound("User does not exist.");
-                if( mappedPath.get("action").equals("follow")){
+                if( mappedPath.get("actionID").equals("follow")){
                     // follow user with id userID
                     try{   
                         db.addFollowerTo(user.getUsername(), mappedPath.get("userID"));
@@ -112,8 +113,8 @@ public class HttpRequestHandler {
                     }catch(ResourceNotFoundException e){
                         return new HttpResponseFactory().buildNotFound(e.getMessage());
                     }
-                }else if ( mappedPath.get("action").equals("unfollow") ){
-                    // unfollow user with id userID
+                }else if ( mappedPath.get("actionID").equals("unfollow") ){
+                    // unfollow user with id userIIDD
                     try{
                         db.removeFollowerTo(user.getUsername(), mappedPath.get("userID"));
                         String responseMessage = JacksonUtil.getStringFromObject( 
@@ -229,7 +230,6 @@ public class HttpRequestHandler {
                 }
                 String responseMessage = JacksonUtil.getStringFromObject( 
                     new HashMap<String, String>() {{
-                        put("message", "Login performed.");
                         put("multicast_group_ip", ServerMain.server_config.MULTICAST_ADDRESS);
                         put("multicast_group_port", Integer.toString(ServerMain.server_config.MULTICAST_PORT) );
                     }}
@@ -338,7 +338,7 @@ public class HttpRequestHandler {
                             responseMessage = JacksonUtil.getStringFromObject( 
                                 new HashMap<String, Object>() {{
                                     put("wallet", user.getWallet());
-                                    put("wallet_history", user.getWalletHistory());
+                                    put("wallet_history", user.getWallet_history());
                                 }}
                             );
                         }
@@ -356,7 +356,7 @@ public class HttpRequestHandler {
                     }},
                     "userFilter",
                     // fields to ignore
-                    "password", "wallet", "walletHistory"
+                    "password", "wallet", "wallet_history"
                     
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
@@ -368,10 +368,13 @@ public class HttpRequestHandler {
                 if(postFromPostID==null){
                     return new HttpResponseFactory().buildNotFound("The post does not exist.");
                 }
-                String responseMessage = JacksonUtil.getStringFromObject(
+                String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields(
                     new HashMap<String, Post>() {{
                         put("post", postFromPostID);
-                    }}
+                    }},
+                    "postFilter",
+                    // ignore these
+                    "postAge"
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
             }
@@ -381,25 +384,50 @@ public class HttpRequestHandler {
                 if(postsFromUserID==null)
                     return new HttpResponseFactory().buildNotFound("The user does not exist.");
                 
-                String responseMessage = JacksonUtil.getStringFromObject( 
+                String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields( 
                     new HashMap<String, Post[]>() {{
                         put("posts", postsFromUserID);
-                    }}
+                    }},
+                    "postFilter",
+                    //ignore these
+                    "postAge"
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
             }
             case "users":{
                 // get users from tagName
-                HashMap<String, User> usersFromTagname = 
-                    db.getUsersFromTagname( mappedPath.get("tagName") );
+                HashMap<String, HashSet<User>> tagToUsers = new HashMap<String, HashSet<User>>();
+                for (String tag : user.getTags()) {
+                    tagToUsers.put(tag, db.getUsersFromTagname( tag ));
+                }                    
                 
                 String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields( 
-                    new HashMap<String, HashMap<String, User>>() {{
-                        put("users", usersFromTagname);
+                    new HashMap<String, HashMap<String, HashSet<User>>>() {{
+                        put("users", tagToUsers);
                     }},
                     "userFilter",
                     // fields to ignore
-                    "password", "wallet", "walletHistory"
+                    "password", "wallet", "wallet_history"
+                );
+                return new HttpResponseFactory().buildSuccess(responseMessage);
+            }
+            case "feed":{
+                // get user feed (posts from users the user follows)
+                HashMap<String, Post[]> userToPosts = new HashMap<>();
+                for (String uName : user.getFollowing()) {
+                    Post[] postsFromUserID = db.getPostsFromUsername( uName );
+                    if(postsFromUserID!=null){
+                        userToPosts.put(uName, postsFromUserID);
+                    }
+                }
+
+                String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields( 
+                    new HashMap<String, HashMap<String, Post[]>>() {{
+                        put("feed", userToPosts);
+                    }},
+                    "postFilter",
+                    //ignore these
+                    "postAge"
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
             }

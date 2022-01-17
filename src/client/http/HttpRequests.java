@@ -3,6 +3,7 @@ package client.http;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -65,9 +66,18 @@ public class HttpRequests {
                     wr.write(putData);
                 }
             }
+            
+            InputStream readHere = null;
 
+            if(con.getResponseCode()>200){
+                //unauhthorized
+                readHere = con.getErrorStream();
+            }else{
+                readHere = con.getInputStream();
+            }
+            
             try (var br = new BufferedReader(
-                    new InputStreamReader(con.getInputStream()))) {
+                    new InputStreamReader(readHere))) {
                 String line;
                 content = new StringBuilder();
                 while ((line = br.readLine()) != null) {
@@ -103,8 +113,17 @@ public class HttpRequests {
                 wr.write(postData);
             }
 
+            InputStream readHere = null;
+
+            if(con.getResponseCode()>200){
+                //unauhthorized
+                readHere = con.getErrorStream();
+            }else{
+                readHere = con.getInputStream();
+            }
+
             try (var br = new BufferedReader(
-                    new InputStreamReader(con.getInputStream()))) {
+                    new InputStreamReader(readHere))) {
 
                 String line;
                 content = new StringBuilder();

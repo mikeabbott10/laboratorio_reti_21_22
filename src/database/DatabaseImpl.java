@@ -2,8 +2,10 @@ package database;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap.KeySetView;
@@ -156,20 +158,25 @@ public class DatabaseImpl implements Database{
         }catch(Exception e){
             return null;
         }
-        return (Post[]) posts.toArray();
+
+        Object[] objArray = posts.toArray();
+        // Converting object array to string array
+        Post[] posts_array = Arrays.copyOf(
+            objArray, objArray.length, Post[].class);
+        return posts_array ;
     }
 
     /**
      * query simulation:
-     *      SELECT * FROM users U WHERE <U.tag contains string>
+     *      SELECT * FROM users U WHERE <U.tag contains tagname>
      */
     @Override
-    public HashMap<String, User> getUsersFromTagname(String tagname) {
-        HashMap<String, User> users = new HashMap<>();
+    public HashSet<User> getUsersFromTagname(String tagname) {
+        HashSet<User> users = new HashSet<>();
         social.getUsers().forEach((username, user) -> {
             for (String tag : user.getTags()) {
                 if(tag.equals(tagname) ){
-                    users.put(username, user);
+                    users.add(user);
                     break;
                 }
             }
@@ -251,18 +258,24 @@ public class DatabaseImpl implements Database{
     public synchronized void addVoteTo(int postID, String username) 
             throws ResourceNotFoundException, ForbiddenActionException {
         checkPostUserInteractionValidity(postID, username);
-        social.getPosts().get(postID).addVote(username);
-        social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
+        if(social.getPosts().get(postID).getAuthor().equals(username))
+            throw new ForbiddenActionException();
+        if(social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
+            throw new ForbiddenActionException("Upvote already inserted");
         social.getNewUpvotes().get(postID).add(username);
+        social.getPosts().get(postID).addVote(username);
     }
 
     @Override
     public synchronized void addDownvoteTo(int postID, String username) 
             throws ResourceNotFoundException, ForbiddenActionException {
         checkPostUserInteractionValidity(postID, username);
-        social.getPosts().get(postID).addDownVote(username);
-        social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
+        if(social.getPosts().get(postID).getAuthor().equals(username))
+            throw new ForbiddenActionException();
+        if(social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
+            throw new ForbiddenActionException("Downvote already inserted");
         social.getNewDownvotes().get(postID).add(username);
+        social.getPosts().get(postID).addDownVote(username);
     }
 
     // /user

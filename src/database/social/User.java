@@ -3,10 +3,8 @@ package database.social;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,7 +25,7 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
     private HashSet<String> followers; // users who follow this
     private HashSet<String> following; // users this follows
     private double wallet;
-    private Set<WalletTransaction> walletHistory;
+    private Set<WalletTransaction> wallet_history;
     
     public User(SocialService social, String username, String password, String[] tags) 
                         throws NoSuchAlgorithmException, InvalidKeySpecException{
@@ -43,7 +41,7 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
         this.followers = new HashSet<>();
         this.following = new HashSet<>();
         this.wallet = 0;
-        this.walletHistory = ConcurrentHashMap.newKeySet();
+        this.wallet_history = ConcurrentHashMap.newKeySet();
     }
 
     public boolean addPost(int postId) {
@@ -69,7 +67,7 @@ public @Data class User implements java.io.Serializable, Comparable<User>{
     public void updateWallet(double amountToAdd) {
         this.wallet+=amountToAdd;
         // save transaction
-        this.walletHistory.add(new WalletTransaction(
+        this.wallet_history.add(new WalletTransaction(
             Constants.DATE_FORMAT.format(Timestamp.valueOf(LocalDateTime.now())), 
             amountToAdd)
         );

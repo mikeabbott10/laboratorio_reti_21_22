@@ -1,6 +1,6 @@
 package database;
 
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import database.social.Post;
@@ -22,7 +22,7 @@ public interface Database {
     public void addComment(int postID, String comment, String author) throws ResourceNotFoundException, ForbiddenActionException;
     public Post getPost(int postID);
     public Post[] getPostsFromUsername(String string);
-    public HashMap<String, User> getUsersFromTagname(String string);
+    public HashSet<User> getUsersFromTagname(String string);
     public void addFollowerTo(String username, String string) throws ResourceNotFoundException;
     public void removeFollowerTo(String username, String userToFollow) throws ResourceNotFoundException;
     public void addVoteTo(int parseInt, String username) throws ResourceNotFoundException, ForbiddenActionException;

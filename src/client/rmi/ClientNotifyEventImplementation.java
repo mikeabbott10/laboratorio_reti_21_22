@@ -3,22 +3,24 @@ import java.rmi.RemoteException;
 import java.rmi.server.RemoteObject;
 import java.util.HashSet;
 
+import client.Client;
+
 public class ClientNotifyEventImplementation extends RemoteObject 
-                            implements ClientNotifyEventInterface {
-    public ClientNotifyEventImplementation() throws RemoteException { 
-        super(); 
-    }
+                                    implements ClientNotifyEventInterface {
+        private Client client;
 
-    /**
-     * Called by server to notify the new followers list
-     * @throws Exception
-     */
-    @Override
-    public void newFollowersList(HashSet<String> followersList) 
+        public ClientNotifyEventImplementation(Client client) throws RemoteException { 
+            super();
+            this.client = client;
+        }
+
+        /**
+        * Called by server to notify the new followers list
+        * @throws Exception
+        */
+        @Override
+        public void newFollowersList(HashSet<String> updatedFollowers) 
             throws RemoteException, Exception {
-        System.out.println("new followers list received: "+ followersList);
-        
+            client.followers = updatedFollowers;
+        }
     }
-
-    
-}
