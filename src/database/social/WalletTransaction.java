@@ -12,5 +12,4 @@ public @Data class WalletTransaction implements java.io.Serializable{
         this.date = date;
         this.amount = amount;
     }
-    
 }

@@ -1,10 +1,12 @@
 package server.http.handler;
 
 import java.io.IOException;
+import java.net.ProtocolException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.rmi.RemoteException;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -37,7 +39,8 @@ public class HttpRequestHandler {
         this.validator = new HttpRequestValidator();
     }
 
-    public HttpResponse handleRequest(Database db, CustomRequest req) throws IOException, DatabaseException{
+    public HttpResponse handleRequest(Database db, CustomRequest req) 
+            throws DatabaseException, ProtocolException, JsonProcessingException{
         HttpRequest request = new HttpRequestValidator().parseRequest(req.getMessage());
         //LOGGER.info("Parsed incoming HTTP request: " + request);
 
@@ -58,7 +61,15 @@ public class HttpRequestHandler {
             return (HttpResponse) loginValidationResult;
         }
         //#endregion
-        User user = (User) loginValidationResult;
+
+        // update last_session field of the logged user
+        User u = (User) loginValidationResult;
+        synchronized(u.getLast_session()){
+            u.setLast_session(Calendar.getInstance().getTime());
+        }
+
+        // local user instance to avoid heavy synchronization working with it
+        User user = new User( u, db );
 
         switch(request.getMethod()){
             case "GET":{
@@ -93,8 +104,6 @@ public class HttpRequestHandler {
             case "user":{
                 if(user.getUsername().equals(mappedPath.get("userID")))
                     new HttpResponseFactory().buildBadRequest("Cannot follow yourself.");
-                if( db.getUser(mappedPath.get("userID"))==null )
-                    new HttpResponseFactory().buildNotFound("User does not exist.");
                 if( mappedPath.get("actionID").equals("follow")){
                     // follow user with id userID
                     try{   
@@ -104,17 +113,22 @@ public class HttpRequestHandler {
                                 put("message", "Follow added.");
                             }}
                         );
-                        try {
-                            ServerMain.serverRMIService.updateFollowersList(db.getUser(mappedPath.get("userID")));
-                        } catch (RemoteException e) {
-                            e.printStackTrace();
-                        }
+                        // note that users cannot be removed:
+                        // here we are sure about mappedPath.get("userID") existence (and user one)
+                        ServerMain.serverRMIService.updateFollowersList( new User( db.getUser(mappedPath.get("userID")), db ) );
+                        
                         return new HttpResponseFactory().buildSuccess(responseMessage);
                     }catch(ResourceNotFoundException e){
                         return new HttpResponseFactory().buildNotFound(e.getMessage());
+                    } catch (ForbiddenActionException e1) {
+                        return new HttpResponseFactory().buildForbiddenResponse(e1.getMessage());
+                    }catch(NullPointerException e){
+                        // not possible here
+                        // maybe working on a user which is now deleted from another thread
+                        return new HttpResponseFactory().buildErrorResponse("Operation not available.");
                     }
                 }else if ( mappedPath.get("actionID").equals("unfollow") ){
-                    // unfollow user with id userIIDD
+                    // unfollow user with id userID
                     try{
                         db.removeFollowerTo(user.getUsername(), mappedPath.get("userID"));
                         String responseMessage = JacksonUtil.getStringFromObject( 
@@ -122,14 +136,19 @@ public class HttpRequestHandler {
                                 put("message", "Follow removed.");
                             }}
                         );
-                        try {
-                            ServerMain.serverRMIService.updateFollowersList(db.getUser(mappedPath.get("userID")));
-                        } catch (RemoteException e) {
-                            e.printStackTrace();
-                        }
+                        // note that users cannot be removed:
+                        // here we are sure about mappedPath.get("userID") existence (and user one)
+                        ServerMain.serverRMIService.updateFollowersList( new User( db.getUser(mappedPath.get("userID")), db ) );
+                        
                         return new HttpResponseFactory().buildSuccess(responseMessage);
                     }catch(ResourceNotFoundException e){
                         return new HttpResponseFactory().buildNotFound(e.getMessage());
+                    } catch (ForbiddenActionException e1) {
+                        return new HttpResponseFactory().buildForbiddenResponse(e1.getMessage());
+                    }catch(NullPointerException e){
+                        // not possible here
+                        // maybe working on a user which is now deleted from another thread
+                        return new HttpResponseFactory().buildErrorResponse("Operation not available.");
                     }
                 }
                 return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
@@ -162,6 +181,9 @@ public class HttpRequestHandler {
                             return new HttpResponseFactory().buildNotFound(ex.getMessage());
                         }catch(ForbiddenActionException exc){
                             return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }catch(NullPointerException e){
+                            // maybe working on a post which is now deleted from another thread
+                            return new HttpResponseFactory().buildErrorResponse("Operation not available.");
                         }
                     }
                     case "rewin":{
@@ -177,6 +199,9 @@ public class HttpRequestHandler {
                             return new HttpResponseFactory().buildNotFound(ex.getMessage());
                         }catch(ForbiddenActionException exc){
                             return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }catch(NullPointerException e){
+                            // maybe working on a post which is now deleted from another thread
+                            return new HttpResponseFactory().buildErrorResponse("Operation not available.");
                         }
                     }
                     case "vote":{
@@ -192,6 +217,9 @@ public class HttpRequestHandler {
                             return new HttpResponseFactory().buildNotFound(ex.getMessage());
                         }catch(ForbiddenActionException exc){
                             return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }catch(NullPointerException e){
+                            // maybe working on a post which is now deleted from another thread
+                            return new HttpResponseFactory().buildErrorResponse("Operation not available.");
                         }
                     }
                     case "unvote":{
@@ -207,6 +235,9 @@ public class HttpRequestHandler {
                             return new HttpResponseFactory().buildNotFound(ex.getMessage());
                         }catch(ForbiddenActionException exc){
                             return new HttpResponseFactory().buildForbiddenResponse(exc.getMessage());
+                        }catch(NullPointerException e){
+                            // maybe working on a post which is now deleted from another thread
+                            return new HttpResponseFactory().buildErrorResponse("Operation not available.");
                         }
                     }
                 }
@@ -228,6 +259,10 @@ public class HttpRequestHandler {
                 }catch(AlreadyConnectedException e){
                     return new HttpResponseFactory().buildForbiddenResponse("User already connected.");
                 }
+
+                ServerMain.serverRMIService.updateFollowersList( user );
+                
+
                 String responseMessage = JacksonUtil.getStringFromObject( 
                     new HashMap<String, String>() {{
                         put("multicast_group_ip", ServerMain.server_config.MULTICAST_ADDRESS);
@@ -259,7 +294,7 @@ public class HttpRequestHandler {
 
         // remove the post
         try{
-            db.removePost(user, postID);
+            db.removePost(user.getUsername(), postID);
             String responseMessage = JacksonUtil.getStringFromObject(
                 new HashMap<String, String>() {{
                     put("message", "Post deleted.");
@@ -268,6 +303,9 @@ public class HttpRequestHandler {
             return new HttpResponseFactory().buildSuccess(responseMessage);
         }catch(ResourceNotFoundException e){
             return new HttpResponseFactory().buildNotFound("The post does not exist.");
+        }catch(NullPointerException e){
+            // maybe working on a post which is now deleted from another thread
+            return new HttpResponseFactory().buildErrorResponse("Operation not available.");
         }
     }
 
@@ -284,6 +322,9 @@ public class HttpRequestHandler {
                 postID = db.createPost( postProperties.title, postProperties.content, user.getUsername());
             }catch(ForbiddenActionException e){
                 return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+            }catch(NullPointerException e){
+                // maybe working on a user which is now deleted from another thread
+                return new HttpResponseFactory().buildErrorResponse("Operation not available.");
             }
             // post created
             String responseMessage = JacksonUtil.getStringFromObject( 
@@ -310,10 +351,14 @@ public class HttpRequestHandler {
         switch( request.getPath().split("/")[1] ){
             case "user":{
                 // get user from userID or get own wallet
-                User userFromUserID = db.getUser( mappedPath.get("userID") );
-                if(userFromUserID==null)
+                User userFromUserID;
+                try{
+                    userFromUserID = new User( db.getUser( mappedPath.get("userID") ), db );
+                }catch(NullPointerException e){
                     return new HttpResponseFactory().buildNotFound("The user does not exist.");
+                }
                 
+                // if wallet
                 if(mappedPath.containsKey("btcWallet")){
                     // get own wallet
                     if(user.equals(userFromUserID)){
@@ -322,14 +367,13 @@ public class HttpRequestHandler {
                         if(mappedPath.get("btcWallet").equals("1")){
                             // get bitcoin wallet
                             try {
-                                double btc = getBitcoinWallet(user.getWallet());
+                                double btc = getBitcoinWallet(user.getWallet().getValue());
                                 responseMessage = JacksonUtil.getStringFromObject( 
                                     new HashMap<String, Double>() {{
                                         put("wallet", btc);
                                     }}
                                 );
                             } catch (IOException | InterruptedException | NumberFormatException | NullPointerException e) {
-                                // TODO Auto-generated catch block
                                 e.printStackTrace();
                                 return new HttpResponseFactory().buildBadRequest("Sorry, we can't get this information at the moment."); 
                             }
@@ -337,7 +381,7 @@ public class HttpRequestHandler {
                             //get wallet
                             responseMessage = JacksonUtil.getStringFromObject( 
                                 new HashMap<String, Object>() {{
-                                    put("wallet", user.getWallet());
+                                    put("wallet", user.getWallet().getValue());
                                     put("wallet_history", user.getWallet_history());
                                 }}
                             );
@@ -348,7 +392,6 @@ public class HttpRequestHandler {
                         return new HttpResponseFactory().buildForbiddenResponse("Operation forbidden."); 
                     }
                 }
-
                 // get user from userID
                 String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields( 
                     new HashMap<String, User>() {{
@@ -364,8 +407,10 @@ public class HttpRequestHandler {
             case "post":{
                 // get post from postID
                 int postID = Integer.parseInt( mappedPath.get("postID") );
-                Post postFromPostID = db.getPost( postID );
-                if(postFromPostID==null){
+                Post postFromPostID;
+                try{
+                    postFromPostID = new Post(db.getPost( postID ));
+                }catch(NullPointerException e){
                     return new HttpResponseFactory().buildNotFound("The post does not exist.");
                 }
                 String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields(
@@ -420,6 +465,7 @@ public class HttpRequestHandler {
                         userToPosts.put(uName, postsFromUserID);
                     }
                 }
+                
 
                 String responseMessage = JacksonUtil.getStringFromObjectIgnoreFields( 
                     new HashMap<String, HashMap<String, Post[]>>() {{

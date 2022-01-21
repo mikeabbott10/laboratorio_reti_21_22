@@ -65,7 +65,7 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
                                                     String username, String password) 
                                         throws RemoteException, AlreadyConnectedException,
                                                 LoginException, DatabaseException{
-        User user = getAllowedUser(username, password); // throws LoginException, DatabaseException
+        /*User user = */getAllowedUser(username, password); // throws LoginException, DatabaseException
 
         // user allowed
         // add new interface
@@ -99,7 +99,7 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
         System.out.println("Client unregistered");
     }
 
-    public void safeUnregisterForCallback(String username){
+    public synchronized void safeUnregisterForCallback(String username){
         ClientNotifyEventInterface clientInterface = notifyEnabledClientInterfaces.remove(username);
         if(clientInterface==null){
             System.out.println("Unable to unregister client");
@@ -112,10 +112,31 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
     /*
      * Send user followers list to user
      */
-    public synchronized void updateFollowersList(User user) throws RemoteException {
+    public synchronized void updateFollowersList(User user) {
+        if(user==null) return;
         ClientNotifyEventInterface clientInterface = notifyEnabledClientInterfaces.get(user.getUsername());
+        if(clientInterface==null) return;
         try {
-            clientInterface.newFollowersList(user.getFollowers());
+            synchronized(db.getFollowObj()){
+                clientInterface.newFollowersList(user.getFollowers());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Send no more logged notification
+     * @param uname
+     * @throws RemoteException
+     */
+    public synchronized void sendLogoutNotification(String uname){
+        if(uname==null) return;
+        ClientNotifyEventInterface clientInterface = notifyEnabledClientInterfaces.get(uname);
+        //System.out.println(clientInterface);
+        if(clientInterface==null) return;
+        try {
+            clientInterface.noMoreLoggedNotification();
         } catch (Exception e) {
             e.printStackTrace();
         }

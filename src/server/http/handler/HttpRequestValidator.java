@@ -4,6 +4,7 @@ import static server.util.Constants.SUPPORTED_HTTP_METHODS;
 import static server.util.Constants.SUPPORTED_HTTP_VERSION;
 
 import java.io.IOException;
+import java.net.ProtocolException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +75,7 @@ public class HttpRequestValidator {
         return null;
     }
 
-    protected HttpRequest parseRequest(String raw) throws IOException {
+    protected HttpRequest parseRequest(String raw) throws ProtocolException {
         try {
             String[] rows = raw.split("\n");
             String[] firstRow = rows[0].split(" ");
@@ -101,7 +102,7 @@ public class HttpRequestValidator {
 
             return new HttpRequest(headers, method, path, version, body);
         } catch (Exception e) {
-            throw new IOException("Malformed request", e);
+            throw new ProtocolException("Malformed request");
         }
     }
 

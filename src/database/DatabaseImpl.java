@@ -4,7 +4,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +24,12 @@ import exceptions.ResourceNotFoundException;
 public class DatabaseImpl implements Database{
     private SocialService social;
 
+    // atomicity wrappers
+    public final Object commentObj = new Object();
+    public final Object rewinObj = new Object();
+    public final Object rateObj = new Object();
+    public final Object followObj = new Object();
+    
     public DatabaseImpl(SocialService social){
         this.social= social;
     }
@@ -95,14 +100,21 @@ public class DatabaseImpl implements Database{
      * @throws ResourceNotFoundException
      */
     @Override
-    public void removePost(User user, int postID) 
+    public void removePost(String username, int postID) 
             throws ResourceNotFoundException{
-        if( user.getPosts().remove(postID) == false )
+        User us = social.getUsers().get(username);
+        if(us==null)
+            throw new ResourceNotFoundException("User does not exists.");
+        if( us.removePost(postID) == false )
             throw new ResourceNotFoundException("Post not found");
-        Post p = social.getPosts().remove(postID);
+        Post p = social.removePost(postID);
         if( p != null ){
-            p.getRewinnedBy().forEach((String username) -> {
-                social.getUsers().get(username).getPosts().remove(postID);
+            // p.getRewinnedBy can be modified by this.rewinPost
+            p.getRewinnedBy().forEach((String uname) -> {
+                User u = social.getUsers().get(uname);
+                if(u!=null){
+                    u.removePost(postID);
+                }
             });
             return;
         }
@@ -119,15 +131,20 @@ public class DatabaseImpl implements Database{
      * @throws ForbiddenActionException
      */
     @Override
-    public int createPost(String title, String content, String author) throws DatabaseException, ForbiddenActionException{
+    public int createPost(String title, String content, String author) 
+            throws DatabaseException, ForbiddenActionException{
         if(content.length()>500 || title.length()>20){
-            //System.out.println("Title max length: 20 characters. Content max length: 500 characters.");
-            throw new ForbiddenActionException();
+            throw new ForbiddenActionException("Invalid content or title.");
         }
-        int postId = social.postIdCounter++;
-        Post post = new Post(postId, title, content, author, social.getRewardRoutineAge());
-        if( social.getUsers().get(author).addPost(postId) == false || 
-                social.getPosts().put(postId, post) != null )
+        int postId = social.getPostIdCounter().getAndIncrement(); // atomically increments by one
+        Post post = new Post(postId, title, content, author, social.getRewardRoutineAge().get());
+        User user = social.getUsers().get(author);
+        // *** what if i create the author here? (it's possible, it's multithreading)
+        // i don't care. Too many chances this won't happen, just a failed post creation.
+        if(user == null){
+            throw new ForbiddenActionException("Not allowed. Please retry.");
+        }
+        if( user.addPost(postId) == false || social.addPost(postId, post) != null) 
             throw new DatabaseException();
         return postId;
     }
@@ -148,12 +165,17 @@ public class DatabaseImpl implements Database{
     @Override
     public Post[] getPostsFromUsername(String username) {
         Vector<Post> posts = new Vector<>();
-        User u = social.getUsers().get(username);
-        if(u==null)
+        User  u;
+        try{
+            u = new User( social.getUsers().get(username), this );
+        }catch(NullPointerException e){
             return null;
+        }
         try{
             for (int postID : u.getPosts()) {
-                posts.add( social.getPosts().get(postID) );
+                Post p = new Post( social.getPosts().get(postID) );
+                if(p!=null)
+                    posts.add( p );
             };
         }catch(Exception e){
             return null;
@@ -197,106 +219,155 @@ public class DatabaseImpl implements Database{
         social.getLoggedUsers().remove(username);
     }
 
+
+    // rewardThread calls the next 4 methods
     /**
      * add 1 to reward routine age.
      */
     @Override
     public int updateRewardIterations() {
-        social.setRewardRoutineAge(social.getRewardRoutineAge()+1);
-        return social.getRewardRoutineAge();
+        return social.getRewardRoutineAge().incrementAndGet();
         
     }
-
     @Override
     public ConcurrentHashMap<Integer, KeySetView<String, Boolean>> getNewUpvotes() {
-        return social.getNewUpvotes();
+        synchronized(this.rateObj){
+            return social.getNewUpvotes();
+        }
     }
-
     @Override
     public ConcurrentHashMap<Integer, KeySetView<String, Boolean>> getNewDownvotes() {
-        return social.getNewDownvotes();
+        synchronized(this.rateObj){
+            return social.getNewDownvotes();
+        }
     }
-
     @Override
     public ConcurrentHashMap<Integer, KeySetView<String, Boolean>> getNewComments() {
-        return social.getNewComments();
+        synchronized(this.commentObj){
+            return social.getNewComments();
+        }
     }
+
+    // called by BackupThread and CleanRoutine
+    @Override
+    public SocialService getSocialInstance() {
+        return social;
+    }
+
+    //#endregion  
+
 
     @Override
     public ConcurrentHashMap<Integer, Post> getPosts() {
         return social.getPosts();
     }
 
-    @Override
-    public Object getSocialInstance() {
-        return social;
-    }
-
-    //#endregion  
-
-    //#region PUT request works
-
     // /post
     @Override
-    public synchronized void addComment(int postID, String comment, String author) 
+    public void addComment(int postID, String comment, String author) 
             throws ResourceNotFoundException, ForbiddenActionException{
-        checkPostUserInteractionValidity(postID, author);
-        social.getPosts().get(postID).addComment(author, comment);
-        social.getNewComments().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
-        social.getNewComments().get(postID).add(author);
+        Object[] o = checkPostUserInteractionValidity(postID, author);
+        Post post = (Post) o[0];
+        //User user = (User) o[1];
+        if(post.addComment(author, comment) == false)
+            throw new ForbiddenActionException("Cannot add this comment.");
+        // if at *** i use call getNewComments from rewardThread i get inconsistency: 
+        // need atomicity here
+        synchronized(this.commentObj){
+            social.getNewComments().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
+            // ***
+            social.getNewComments().get(postID).add(author);
+        }
     }
 
     @Override
-    public synchronized void rewinPost(int postID, String rewinner) 
+    public void rewinPost(int postID, String rewinner) 
             throws ResourceNotFoundException, ForbiddenActionException {
-        checkPostUserInteractionValidity(postID, rewinner);
-        social.getUsers().get(rewinner).getPosts().add(postID);
-        social.getPosts().get(postID).getRewinnedBy().add(rewinner);
+        Object[] o = checkPostUserInteractionValidity(postID, rewinner);
+        Post post = (Post) o[0];
+        User user = (User) o[1];
+        // need atomicity here
+        synchronized(this.rewinObj){
+            user.addPost(postID);
+            // ***
+            post.addRewinnedBy(rewinner);
+        }
     }
     
     @Override
-    public synchronized void addVoteTo(int postID, String username) 
+    public void addVoteTo(int postID, String username) 
             throws ResourceNotFoundException, ForbiddenActionException {
-        checkPostUserInteractionValidity(postID, username);
-        if(social.getPosts().get(postID).getAuthor().equals(username))
+        Object[] o = checkPostUserInteractionValidity(postID, username);
+        Post post = (Post) o[0];
+        //User user = (User) o[1];
+        if(post.getAuthor().equals(username))
             throw new ForbiddenActionException();
-        if(social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
-            throw new ForbiddenActionException("Upvote already inserted");
-        social.getNewUpvotes().get(postID).add(username);
-        social.getPosts().get(postID).addVote(username);
+        // need atomicity here
+        synchronized(this.rateObj){
+            if(social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
+                throw new ForbiddenActionException("Upvote already inserted");
+            // ***
+            social.getNewUpvotes().get(postID).add(username);
+            // ***
+            post.addVote(username);
+        }
     }
 
     @Override
-    public synchronized void addDownvoteTo(int postID, String username) 
+    public void addDownvoteTo(int postID, String username) 
             throws ResourceNotFoundException, ForbiddenActionException {
-        checkPostUserInteractionValidity(postID, username);
-        if(social.getPosts().get(postID).getAuthor().equals(username))
+        Object[] o = checkPostUserInteractionValidity(postID, username);
+        Post post = (Post) o[0];
+        //User user = (User) o[1];
+        if(post.getAuthor().equals(username))
             throw new ForbiddenActionException();
-        if(social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
-            throw new ForbiddenActionException("Downvote already inserted");
-        social.getNewDownvotes().get(postID).add(username);
-        social.getPosts().get(postID).addDownVote(username);
+        // need atomicity here
+        synchronized(this.rateObj){
+            if(social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
+                throw new ForbiddenActionException("Downvote already inserted");
+            // ***
+            social.getNewDownvotes().get(postID).add(username);
+            // ***
+            post.addDownVote(username);
+        }
     }
 
     // /user
     @Override
-    public synchronized void addFollowerTo(String username, String userToFollow) 
-            throws ResourceNotFoundException {
-        if( social.getUsers().get(username)==null || social.getUsers().get(userToFollow)==null )
+    public void addFollowerTo(String username, String userToFollow) 
+            throws ResourceNotFoundException, ForbiddenActionException {
+        User user = social.getUsers().get(username);
+        if( user==null || social.getUsers().get(userToFollow)==null )
             throw new ResourceNotFoundException("User does not exist.");
-        social.getUsers().get(userToFollow).addFollower(username);
-        social.getUsers().get(username).addFollowing(userToFollow);
+        if(username.equals(userToFollow))
+            throw new ForbiddenActionException("Cannot follow yourself.");
+        if(user.getFollowing().contains(userToFollow))
+            throw new ForbiddenActionException("User already followed.");
+        // need atomicity here
+        synchronized(this.followObj){
+            social.getUsers().get(userToFollow).addFollower(username);
+            // *** 
+            social.getUsers().get(username).addFollowing(userToFollow);
+        }
     }
 
     @Override
     public void removeFollowerTo(String username, String userToUnfollow) 
-            throws ResourceNotFoundException {
-        if( social.getUsers().get(username)==null || social.getUsers().get(userToUnfollow)==null )
+            throws ResourceNotFoundException, ForbiddenActionException {
+        User user = social.getUsers().get(username);
+        if( user==null || social.getUsers().get(userToUnfollow)==null )
             throw new ResourceNotFoundException("User does not exist.");
-        social.getUsers().get(userToUnfollow).removeFollower(username);
-        social.getUsers().get(username).removeFollowing(userToUnfollow);
+        if(username.equals(userToUnfollow))
+            throw new ForbiddenActionException("Cannot follow yourself.");
+        if(!user.getFollowing().contains(userToUnfollow))
+            throw new ForbiddenActionException("User not followed yet.");
+        // need atomicity here
+        synchronized(this.followObj){
+            social.getUsers().get(userToUnfollow).removeFollower(username);
+            // *** 
+            social.getUsers().get(username).removeFollowing(userToUnfollow);
+        }
     }
-    //#endregion
 
     //#region private DB functions
     /**
@@ -317,10 +388,11 @@ public class DatabaseImpl implements Database{
      * Check if the post and the user exist in social and check if user can interact with post
      * @param postID
      * @param username
+     * @return non null {Post instance, User instance}
      * @throws ResourceNotFoundException
      * @throws ForbiddenActionException
      */
-    private void checkPostUserInteractionValidity(int postID, String username) 
+    private Object[] checkPostUserInteractionValidity(int postID, String username) 
             throws ResourceNotFoundException, ForbiddenActionException{
         Post post = social.getPosts().get(postID);
         if( post==null )
@@ -328,11 +400,12 @@ public class DatabaseImpl implements Database{
         User user = social.getUsers().get(username);
         if( user==null )
             throw new ResourceNotFoundException("User not found.");
-        if( !checkFeed(user, post) && !post.getAuthor().equals(username)){
+        if( !checkFeed(new User(user,this), new Post(post)) && !post.getAuthor().equals(username)){
             // user can do an action on a post only if the post is in its feed or it's his own post
             // reject here
             throw new ForbiddenActionException();
         }
+        return new Object[]{post, user};
     }
 
     //#endregion
@@ -340,21 +413,27 @@ public class DatabaseImpl implements Database{
     //#region reward calculation
     @Override
     public void removeIdFromNewUpvotes(Integer id) {
-        social.getNewUpvotes().remove(id);
+        synchronized(this.rateObj){
+            social.getNewUpvotes().remove(id);
+        }
     }
 
     @Override
     public void removeIdFromNewDownvotes(Integer id) {
-        social.getNewDownvotes().remove(id);
+        synchronized(this.rateObj){
+            social.getNewDownvotes().remove(id);
+        }
     }
 
     @Override
     public void removeIdFromNewComments(Integer id) {
-        social.getNewComments().remove(id);
+        synchronized(this.commentObj){
+            social.getNewComments().remove(id);
+        }
     }
 
     @Override
-    public synchronized void updateUserWallet(String username, double amountToAdd) 
+    public void updateUserWallet(String username, double amountToAdd) 
             throws ResourceNotFoundException {
         User user = social.getUsers().get(username);
         if(user==null)
@@ -363,4 +442,21 @@ public class DatabaseImpl implements Database{
     }
 
     //#endregion
+
+
+    public Object getCommentObj() {
+        return commentObj;
+    }
+
+    public Object getRewinObj() {
+        return rewinObj;
+    }
+
+    public Object getRateObj() {
+        return rateObj;
+    }
+
+    public Object getFollowObj() {
+        return followObj;
+    }
 }

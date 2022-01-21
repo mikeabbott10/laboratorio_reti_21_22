@@ -1,6 +1,5 @@
 package client.social;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import lombok.AllArgsConstructor;
@@ -13,8 +12,8 @@ public @Data class User implements Comparable<User>{
     private String username;
     private Set<Integer> posts;
     private String[] tags;
-    private HashSet<String> followers; // users who follow this
-    private HashSet<String> following; // users this follows
+    private Set<String> followers; // users who follow this
+    private Set<String> following; // users this follows
     
     @Override 
     public boolean equals(Object u2){

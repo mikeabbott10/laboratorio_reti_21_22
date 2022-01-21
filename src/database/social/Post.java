@@ -1,17 +1,19 @@
 package database.social;
 
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.fasterxml.jackson.annotation.JsonFilter;
 
-import lombok.Data;
+import exceptions.ForbiddenActionException;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @JsonFilter("postFilter") // ignore some field serializing with this filter name
-public @Data class Post implements Comparable<Post> {
+public class Post implements Comparable<Post> {
     private long id;
     private String title;
     private String content;
@@ -34,22 +36,54 @@ public @Data class Post implements Comparable<Post> {
         this.upvotes = ConcurrentHashMap.newKeySet();
         this.downvotes = ConcurrentHashMap.newKeySet();
         this.postAge = rewardCalculatorAge;
-        
     }
 
-    public void addComment(String author, String comment){
-        PostComment pc = new PostComment(author, comment);
-        comments.add(pc);
+    public Post(Post p){
+        this.id = p.getId();
+        this.title = p.getTitle();
+        this.content = p.getContent();
+        this.author = p.getAuthor();
+        this.comments = new ConcurrentSkipListSet<>();
+        this.comments.addAll(p.getComments());
+        this.rewinnedBy = ConcurrentHashMap.newKeySet();
+        this.rewinnedBy.addAll(p.getRewinnedBy());
+        this.date = p.getDate();
+        this.upvotes = ConcurrentHashMap.newKeySet();
+        this.upvotes.addAll(p.getUpvotes());
+        this.downvotes = ConcurrentHashMap.newKeySet();
+        this.downvotes.addAll(p.getDownvotes());
+        this.postAge = p.getPostAge();
     }
 
-    public void addVote(String username) {
-        upvotes.add(username);
-        downvotes.remove(username);
+    public boolean addComment(String commentAuthor, String comment){
+        if(this.author == commentAuthor){
+            return false;
+        }
+        PostComment pc = new PostComment(commentAuthor, comment);
+        return comments.add(pc);
     }
 
-    public void addDownVote(String username) {
-        upvotes.remove(username);
-        downvotes.add(username);
+    public void addVote(String username) throws ForbiddenActionException {
+        if(!downvotes.contains(username)){
+            if(!upvotes.add(username))
+                throw new ForbiddenActionException("Vote already inserted");
+        }else
+            throw new ForbiddenActionException("Vote already inserted");
+    }
+
+    public void addDownVote(String username) throws ForbiddenActionException {
+        if(!upvotes.contains(username)){
+            throw new ForbiddenActionException("Vote already inserted");
+        }else
+            throw new ForbiddenActionException("Vote already inserted");
+    }
+
+    public boolean addRewinnedBy(String username) {
+        return rewinnedBy.add(username);
+    }
+
+    public boolean removeRewinnedBy(String username) {
+        return rewinnedBy.remove(username);
     }
 
     public int compareTo(Post p) {
@@ -70,6 +104,45 @@ public @Data class Post implements Comparable<Post> {
         return Long.hashCode(this.id);
     }
 
-    
+    public long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public Set<String> getUpvotes() {
+        return upvotes;
+    }
+
+    public Set<String> getDownvotes() {
+        return downvotes;
+    }
+
+    public ConcurrentSkipListSet<PostComment> getComments() {
+        return comments;
+    }
+
+    public Set<String> getRewinnedBy() {
+        // sync from outside
+        return rewinnedBy;
+    }
+
+    public int getPostAge() {
+        return postAge;
+    }    
 
 }

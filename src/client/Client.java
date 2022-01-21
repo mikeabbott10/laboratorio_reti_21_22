@@ -13,6 +13,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -44,19 +45,36 @@ public class Client {
 
     public final int BUF_SIZE = 4096;
 
-    private ServerRMIInterface serverRMIObj;
-    private ClientNotifyEventInterface stub;
+    protected ServerRMIInterface serverRMIObj;
+    protected ClientNotifyEventInterface stub;
+    protected ClientNotifyEventInterface callbackObj;
 
-    private Thread multicastReceiverThread = null;
+    protected Thread multicastReceiverThread = null;
 
-    private String username = null;
-    private String password = null;
-    public HashSet<String> followers;
+    protected String username = null;
+    protected String password = null;
+    public Set<String> followers = new HashSet<>();
+    public AtomicBoolean logoutNotification;
 
-    private BufferedReader consoleReader;
+    protected BufferedReader consoleReader;
+    public boolean printMulticastNotification;
+    private boolean testEnvironment;
+    private String[] commands;
 
     Client(ClientConfig client_config){
         this.client_config = client_config;
+        this.logoutNotification = new AtomicBoolean(false);
+        this.printMulticastNotification = true;
+        this.testEnvironment = false;
+        this.commands = new String[]{""};
+    }
+
+    Client(ClientConfig client_config, String commandsString){
+        this.client_config = client_config;
+        this.logoutNotification = new AtomicBoolean(false);
+        this.printMulticastNotification = true;
+        this.testEnvironment = true;
+        this.commands = commandsString.split("\\|\\s*");
     }
 
     public void start(){
@@ -67,26 +85,32 @@ public class Client {
                 (ServerRMIInterface) Naming.lookup(client_config.RMIServerUrl + client_config.rmiServiceName);
 
             // prepare callback object
-            ClientNotifyEventInterface callbackObj = new ClientNotifyEventImplementation(this);
+            callbackObj = new ClientNotifyEventImplementation(this);
             stub = (ClientNotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
         }catch(Exception e){
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             return;
         }
         
         consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
+        int commandsIndex = -1;
+
         String cmd;
-        while (!ClientMain.quit) {
+        while (!ClientMain.quit && commandsIndex < commands.length - 1) {
+            commandsIndex = testEnvironment ? commandsIndex+1 : -1;
             try {
                 System.out.printf("> ");
-                cmd = consoleReader.readLine().trim();
+                cmd = testEnvironment ? commands[commandsIndex] : consoleReader.readLine().trim();
+                System.out.println(cmd);
             } catch (IOException e1) {
                 e1.printStackTrace();
                 break;
             }
 
             try{
+                if(logoutNotification.get())
+                    autoLogout();
                 doWork(cmd);
             }catch(PatternSyntaxException e){
                 System.out.println("Comando non valido.");
@@ -95,24 +119,35 @@ public class Client {
             }
         }
 
-        if(multicastReceiverThread==null)
+        if(testEnvironment)
+            doWork("quit");
+
+        if(multicastReceiverThread == null)
             return;
+        multicastReceiverThread.interrupt();
+        System.out.println("Wait...");
         try {
-            multicastReceiverThread.interrupt();
             multicastReceiverThread.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        System.out.println("Bye!");
     }
 
-
     private void doWork(String cmd) {
-        // \\s+ almeno uno spazio, \\s* 0 o più spazi, .* 0 o più caratteri qualsiasi
+        // \\s+ almeno uno spazio, \\s* 0 o più spazi, .* 0 o più caratteri qualsiasi, .+ 1 o più caratteri qualsiasi
         // quit client
         if (Pattern.matches("^quit\\s*$", cmd)) {
             ClientMain.quit = true;
             if(username!=null)
                 sendLogoutRequest();
+            return;
+        }
+
+        // enable/disable print reward received notification
+        if (Pattern.matches("^reward\\s+notification\\s*$", cmd)) {
+            printMulticastNotification = !printMulticastNotification;
+            System.out.println(printMulticastNotification?"Enabled.":"Disabled."); 
             return;
         }
 
@@ -154,10 +189,13 @@ public class Client {
             try {
                 serverRMIObj.registerForCallback(stub, username, password);
             } catch (RemoteException | DatabaseException e) {
-                e.printStackTrace();
+                System.out.println(e.getMessage());
                 setUsernameAndPassword(null, null);
+                return;
             }catch(AlreadyConnectedException e1){
-                e1.printStackTrace();
+                System.out.println(e1.getMessage());
+                setUsernameAndPassword(null, null);
+                return;
             }catch(LoginException ex){
                 setUsernameAndPassword(null, null);
                 System.out.println("Invalid username or password.");
@@ -180,17 +218,16 @@ public class Client {
                         InetAddress.getByName(multicast_data.getMulticast_group_ip()), 
                         Integer.parseInt(multicast_data.getMulticast_group_port())
                     );
-                NetworkInterface netInt = NetworkInterface.getByName("wlan1");
-                MulticastSocket multicast_skt = new MulticastSocket();
-                multicast_skt.joinGroup(group, netInt);
-
+                NetworkInterface netInt = NetworkInterface.getByName("enp42s0");
+                
                 // start notification receiver
-                multicastReceiverThread = new Thread(new MulticastNotificationReceiver(multicast_skt));
+                multicastReceiverThread = new Thread(
+                    new MulticastNotificationReceiver(this, Integer.parseInt(multicast_data.getMulticast_group_port()), group, netInt));
                 multicastReceiverThread.start();
 
                 System.out.println("User "+ username + " logged in");
             }catch(JsonProcessingException e){
-                e.printStackTrace();
+                //e.printStackTrace();
                 ServerResponse serverResponse;
                 try {
                     serverResponse = (ServerResponse) JacksonUtil.getObjectFromString(response, ServerResponse.class);
@@ -423,36 +460,28 @@ public class Client {
          * 500 caratteri. Se l’operazione va a buon fine, il post è creato e disponibile per i follower dell’autore del post.
          * Il sistema assegna un identificatore univoco a ciascun post creato (idPost).
          */
-        if (Pattern.matches("^post\\s*$", cmd)) {
+        if (Pattern.matches("^post\\s+\".+\"\\s+\".+\"\\s*$", cmd)) {
             if (username == null) {
                 System.out.println("User is not logged in."); 
                 return;
             }
-            System.out.printf("Title: ");
-            HashMap<String, String> post;
-            try {
-                System.out.printf("> ");
-                final String title = consoleReader.readLine().trim();
-                if(title.length()>20){
-                    System.out.println("Title max length: 20 characters. Operation rejected.");
-                    return;
-                }
-                System.out.printf("Content: ");
-                System.out.printf("> ");
-                final String content = consoleReader.readLine().trim();
-                if(content.length()>500){
-                    System.out.println("Content max length: 500 characters. Operation rejected.");
-                    return;
-                }
-                post = new HashMap<String, String>() {{
-                    put("title", title);
-                    put("content", content);
-                }};
-            } catch (IOException e) {
-                e.printStackTrace();
+
+            String[] param = cmd.split("\"");
+            final String title = new String(param[1]);
+            final String content = new String(param[3]);
+            if(content.length()>500){
+                System.out.println("Content max length: 500 characters. Operation rejected.");
                 return;
             }
-
+            if(title.length()>20){
+                System.out.println("Title max length: 20 characters. Operation rejected.");
+                return;
+            }
+            
+            HashMap<String, String> post = new HashMap<String, String>() {{
+                put("title", title);
+                put("content", content);
+            }};;
             var postObjectMapper = new ObjectMapper();
             String createPostRequestBody;
             try {
@@ -755,7 +784,7 @@ public class Client {
          * oppure è l’autore del post) il commento non viene accettato e il server restituisce un messaggio di errore.
          * Un utente può aggiungere più di un commento ad un post
          */
-        if (Pattern.matches("^comment\\s+\\S+\\s*$", cmd)){
+        if (Pattern.matches("^comment\\s+\\S+\\s+\\S+\\s*$", cmd)){
             if (username == null) {
                 System.out.println("User is not logged in."); 
                 return;
@@ -883,15 +912,50 @@ public class Client {
     }
 
     private void printUsage() {
-        //TODO
+        System.out.println(
+            String.join("\n",
+                "register <username> <password> <tags>: register a new user",
+                "login <username> <password>: login an user",
+                "logout: logout the current user",
+                "list users: show users with at least one common tag with the current user",
+                "list followers: show the followers of the current user",
+                "list following: show the users followed by the current user",
+                "follow <username>: follow an user",
+                "unfollow <username>: unfollow an user",
+                "blog: show the posts of the current user",
+                "post <title> <content>: create a new post",
+                "show feed: show the feed of the current user",
+                "show post <postId>: show the post with id <postId>",
+                "delete <postId>: delete the post with id <postId>",
+                "rewin <postId>: rewin the post with id <postId>",
+                "rate <postId> +1/-1: rate the post with id <postId>",
+                "comment <postId> <comment>: comment the post with id <postId>",
+                "wallet [btc]: show the wallet of the current user [in bitcoin]",
+                "reward notification: enable/disable reward update notification",
+                "quit: quit"
+            )
+        );
     }
 
     private void setUsernameAndPassword(String username1, String password1) {
         username = username1;
         password = password1;
     }
+    private void autoLogout(){
+        // stop reward notification receiver
+        setUsernameAndPassword(null, null);
+        multicastReceiverThread.interrupt();
+        System.out.println("Wait...");
+        try {
+            multicastReceiverThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("User logged out!");
+    }
 
-    private String sendLogoutRequest() {
+
+    protected String sendLogoutRequest() {
         try {
             return HttpRequests.put("http://"+ client_config.SERVER_IP +":"+ client_config.HTTP_SERVER_PORT + "/logout", null,
                                     username, password);

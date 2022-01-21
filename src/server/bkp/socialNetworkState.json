@@ -1,0 +1,890 @@
+{
+  "users" : {
+    "u5" : {
+      "username" : "u5",
+      "password" : {
+        "hashedPwd" : "1000:6a787a08c66d59dbc71d75b681cb7fa0:7493db22b619db331deccda5b763d956ad7cac001f5e5ade0975a169f20287e6c3bc8d2e817a0361a21a188199a18bf0db5017af0a06fb0cf4eb617171403ef2"
+      },
+      "posts" : [ ],
+      "tags" : [ "arte", "coccole" ],
+      "followers" : [ ],
+      "following" : [ "u3" ],
+      "wallet" : {
+        "value" : 0.0
+      },
+      "wallet_history" : [ ],
+      "last_session" : 1642736165315
+    },
+    "moody" : {
+      "username" : "moody",
+      "password" : {
+        "hashedPwd" : "1000:63adb89e2f21301e87e2bb68bf5e7bf2:3a94b8e2347470aae00884402bb6de6eec4300794de4517226b03d138dd3b6a9d103b4ffc7635af5cc6e6a4890789e7d665df4bc2707317ab38eed429189363e"
+      },
+      "posts" : [ ],
+      "tags" : [ "coccole" ],
+      "followers" : [ "u1", "u2" ],
+      "following" : [ ],
+      "wallet" : {
+        "value" : 0.09704060527839233
+      },
+      "wallet_history" : [ {
+        "date" : "01-20-2022 03:41:10:85",
+        "amount" : 0.0
+      }, {
+        "date" : "01-20-2022 03:40:50:80",
+        "amount" : 0.09704060527839233
+      } ],
+      "last_session" : 1642736194596
+    },
+    "mario" : {
+      "username" : "mario",
+      "password" : {
+        "hashedPwd" : "1000:a258f2eb1e7b35bbac334474b4df4fc3:240e90b64f686c707f1e09939ab9a139d913182a03d2e45b5b8192b04b84759e70c4cdace25098ab0764bb8689f46bdeea93f199be7482a2d718b52b2fbfe432"
+      },
+      "posts" : [ ],
+      "tags" : [ "politica" ],
+      "followers" : [ "u3" ],
+      "following" : [ ],
+      "wallet" : {
+        "value" : 0.04158883083359672
+      },
+      "wallet_history" : [ {
+        "date" : "01-20-2022 03:41:10:85",
+        "amount" : 0.0
+      }, {
+        "date" : "01-20-2022 03:40:50:84",
+        "amount" : 0.04158883083359672
+      } ],
+      "last_session" : 1642736195089
+    },
+    "u1" : {
+      "username" : "u1",
+      "password" : {
+        "hashedPwd" : "1000:d3ce5f3e82554c39a90dac4756673b84:1b971575c7d9e4776359051e024577d230d869fcd7e8cbdf1225e38a151c0d37ccac3468743d60cc553262936f3b34ce64dcaa57647fe89e50244a35b48d947c"
+      },
+      "posts" : [ ],
+      "tags" : [ "politica" ],
+      "followers" : [ ],
+      "following" : [ "moody" ],
+      "wallet" : {
+        "value" : 0.0
+      },
+      "wallet_history" : [ ],
+      "last_session" : 1642736195251
+    },
+    "u2" : {
+      "username" : "u2",
+      "password" : {
+        "hashedPwd" : "1000:daf25d9b44ebb077793961c72cbacd2e:5bc04bc3813a36f56d408598908b638fe9c64fba6f68d18d749ddcf47a02a2c27b84ce80318c07949574723f8b6bcb3ccafd4f48102f87b699683a5335a95b45"
+      },
+      "posts" : [ 1, 2, 3, 5, 8, 9, 11, 13, 14, 16, 19, 20, 22, 23, 24, 25, 29, 31, 34, 35, 37, 41, 48, 51, 52, 54 ],
+      "tags" : [ "calcio" ],
+      "followers" : [ "u4" ],
+      "following" : [ "moody" ],
+      "wallet" : {
+        "value" : 0.0
+      },
+      "wallet_history" : [ {
+        "date" : "01-21-2022 04:23:44:477",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:32:22:354",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:44:473",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:20:34:464",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:14:471",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:14:475",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:04:474",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:34:476",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:04:470",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:24:472",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:54:474",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:24:475",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:54:477",
+        "amount" : 0.0
+      } ],
+      "last_session" : 1642736193002
+    },
+    "u3" : {
+      "username" : "u3",
+      "password" : {
+        "hashedPwd" : "1000:5b3cc98a885a44ff8957d7d5c1a50597:4893c8c45ddc758bb8208010b286f47627d3399a7abf192e8f3755b8414bba0070a9abb089632251bf35716a895d91a30fcf5bd472ffd2c786100d9018e80b71"
+      },
+      "posts" : [ 4, 6, 7, 10, 12, 15, 17, 18, 21, 26, 27, 28, 30, 32, 33, 36, 38, 39, 40, 42, 43, 44, 45, 46, 47, 49, 50, 53, 55 ],
+      "tags" : [ "arte" ],
+      "followers" : [ "u5" ],
+      "following" : [ "mario" ],
+      "wallet" : {
+        "value" : 0.0
+      },
+      "wallet_history" : [ ],
+      "last_session" : 1642736195786
+    },
+    "u4" : {
+      "username" : "u4",
+      "password" : {
+        "hashedPwd" : "1000:758ec8de5b16d6786fbd04c6cb9fabab:44fdd8d0aaba9ec792f07a784798993ae0d7e0119753e0c75a8097b19b031547cdf53d9d3d496427e47212aceb7be23c40054feae3c57ac5dcdc4f5e7b8afb54"
+      },
+      "posts" : [ ],
+      "tags" : [ "coccole" ],
+      "followers" : [ ],
+      "following" : [ "u2" ],
+      "wallet" : {
+        "value" : 0.0
+      },
+      "wallet_history" : [ {
+        "date" : "01-21-2022 04:23:44:477",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:20:34:468",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:44:473",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:32:22:361",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:14:471",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:14:475",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:34:477",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:04:471",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:24:472",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:22:54:474",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:24:476",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:54:478",
+        "amount" : 0.0
+      }, {
+        "date" : "01-21-2022 04:23:04:475",
+        "amount" : 0.0
+      } ],
+      "last_session" : 1642736192896
+    }
+  },
+  "posts" : {
+    "1" : {
+      "id" : 1,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735227983,
+      "upvotes" : [ "u4" ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1505
+    },
+    "2" : {
+      "id" : 2,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735235234,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1506
+    },
+    "3" : {
+      "id" : 3,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735243545,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1506
+    },
+    "4" : {
+      "id" : 4,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735248001,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1507
+    },
+    "5" : {
+      "id" : 5,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735305868,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1513
+    },
+    "6" : {
+      "id" : 6,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735308674,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1513
+    },
+    "7" : {
+      "id" : 7,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735309443,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1513
+    },
+    "8" : {
+      "id" : 8,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735314214,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1513
+    },
+    "9" : {
+      "id" : 9,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735320618,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1514
+    },
+    "10" : {
+      "id" : 10,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735322846,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1514
+    },
+    "11" : {
+      "id" : 11,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735323433,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1514
+    },
+    "12" : {
+      "id" : 12,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735325300,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1515
+    },
+    "13" : {
+      "id" : 13,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735328092,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1515
+    },
+    "14" : {
+      "id" : 14,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735338090,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1516
+    },
+    "15" : {
+      "id" : 15,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735340896,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1516
+    },
+    "16" : {
+      "id" : 16,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735353729,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1517
+    },
+    "17" : {
+      "id" : 17,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735355262,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1518
+    },
+    "18" : {
+      "id" : 18,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735364973,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1519
+    },
+    "19" : {
+      "id" : 19,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735367786,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1519
+    },
+    "20" : {
+      "id" : 20,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735374491,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1520
+    },
+    "21" : {
+      "id" : 21,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735375295,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1520
+    },
+    "22" : {
+      "id" : 22,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735375313,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1520
+    },
+    "23" : {
+      "id" : 23,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735378807,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1520
+    },
+    "24" : {
+      "id" : 24,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735382795,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1520
+    },
+    "25" : {
+      "id" : 25,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735384376,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1520
+    },
+    "26" : {
+      "id" : 26,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735385317,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ {
+        "author" : "u5",
+        "comment" : "\"COMMENTONE\"",
+        "date" : 1642735941784
+      }, {
+        "author" : "u5",
+        "comment" : "\"COMMENTONE\"",
+        "date" : 1642736155807
+      }, {
+        "author" : "u5",
+        "comment" : "\"COMMENTONE\"",
+        "date" : 1642736162569
+      } ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1521
+    },
+    "27" : {
+      "id" : 27,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735388871,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1521
+    },
+    "28" : {
+      "id" : 28,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735390003,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1521
+    },
+    "29" : {
+      "id" : 29,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735393637,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1521
+    },
+    "30" : {
+      "id" : 30,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735398105,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1522
+    },
+    "31" : {
+      "id" : 31,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735400924,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1522
+    },
+    "32" : {
+      "id" : 32,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735403711,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1522
+    },
+    "33" : {
+      "id" : 33,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735405350,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1523
+    },
+    "34" : {
+      "id" : 34,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735406085,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1523
+    },
+    "35" : {
+      "id" : 35,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735410963,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1523
+    },
+    "36" : {
+      "id" : 36,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735413712,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1523
+    },
+    "37" : {
+      "id" : 37,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735415298,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1524
+    },
+    "38" : {
+      "id" : 38,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735415299,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1524
+    },
+    "39" : {
+      "id" : 39,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735418110,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1524
+    },
+    "40" : {
+      "id" : 40,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735941688,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1533
+    },
+    "41" : {
+      "id" : 41,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642735941751,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1533
+    },
+    "42" : {
+      "id" : 42,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735944501,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "43" : {
+      "id" : 43,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735949694,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "44" : {
+      "id" : 44,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735949818,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "45" : {
+      "id" : 45,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735952718,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "46" : {
+      "id" : 46,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735971638,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "47" : {
+      "id" : 47,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642735976615,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "48" : {
+      "id" : 48,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642736155939,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "49" : {
+      "id" : 49,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642736155994,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "50" : {
+      "id" : 50,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642736159043,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "51" : {
+      "id" : 51,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642736171696,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "52" : {
+      "id" : 52,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642736180974,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "53" : {
+      "id" : 53,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642736183423,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "54" : {
+      "id" : 54,
+      "title" : "TITOLO POST DI U2",
+      "content" : "CHEMUSICA",
+      "author" : "u2",
+      "date" : 1642736187802,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    },
+    "55" : {
+      "id" : 55,
+      "title" : "TITOLO POST DI U3",
+      "content" : "BOO",
+      "author" : "u3",
+      "date" : 1642736193798,
+      "upvotes" : [ ],
+      "downvotes" : [ ],
+      "comments" : [ ],
+      "rewinnedBy" : [ ],
+      "postAge" : 1534
+    }
+  },
+  "postIdCounter" : 56,
+  "rewardRoutineAge" : 1534,
+  "tagsUsers" : {
+    "calcio" : [ "u2" ],
+    "coccole" : [ "u5", "moody", "u4" ],
+    "politica" : [ "mario", "u1" ],
+    "arte" : [ "u5", "u3" ]
+  },
+  "newUpvotes" : {
+    "1" : [ "u4" ]
+  },
+  "newDownvotes" : {
+    "1" : [ "u4" ]
+  },
+  "newComments" : {
+    "26" : [ "u5" ]
+  }
+}

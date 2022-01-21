@@ -34,8 +34,9 @@ public class RewardDaemon implements Runnable{
 
     @Override
     public void run() {
-        try (DatagramSocket skt = new DatagramSocket(ServerMain.server_config.MULTICAST_PORT)) {
+        try (DatagramSocket skt = new DatagramSocket(ServerMain.server_config.MULTICAST_PORT +1 )) {
             while (!Thread.currentThread().isInterrupted() && !ServerMain.quit ) {
+                //System.out.println("PIPPO");
                 byte[] msg = "Rewards calculated".getBytes();
                 try {
                     DatagramPacket datagram = new DatagramPacket(msg, msg.length,
@@ -76,11 +77,21 @@ public class RewardDaemon implements Runnable{
     public void rewardCalculator() {
         int rewardLifeIterations = db.updateRewardIterations();
 
-        ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newUpvotes = db.getNewUpvotes();
-        ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newDownvotes = db.getNewDownvotes();
-        ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newComments = db.getNewComments();
-        ConcurrentHashMap<Integer, Post> posts = db.getPosts();
-        ConcurrentHashMap<String, User> users = db.getUsers();
+        ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newUpvotes;
+        ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newDownvotes; 
+        synchronized(db.getRateObj()){
+            newDownvotes = new ConcurrentHashMap<>(db.getNewDownvotes());
+            newUpvotes = new ConcurrentHashMap<>(db.getNewUpvotes());
+        }
+        
+        ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newComments;
+        synchronized(db.getCommentObj()){
+            newComments = new ConcurrentHashMap<>(db.getNewComments());
+        }
+
+
+        ConcurrentHashMap<Integer, Post> posts = new ConcurrentHashMap<>(db.getPosts());
+        ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>(db.getUsers());
 
         HashSet<Integer> modifiedPosts = new HashSet<>();
         modifiedPosts.addAll(newUpvotes.keySet());

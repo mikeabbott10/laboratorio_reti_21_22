@@ -1,7 +1,7 @@
 package client.rmi;
 import java.rmi.RemoteException;
 import java.rmi.server.RemoteObject;
-import java.util.HashSet;
+import java.util.Set;
 
 import client.Client;
 
@@ -16,11 +16,17 @@ public class ClientNotifyEventImplementation extends RemoteObject
 
         /**
         * Called by server to notify the new followers list
-        * @throws Exception
+        * @throws RemoteException
         */
         @Override
-        public void newFollowersList(HashSet<String> updatedFollowers) 
-            throws RemoteException, Exception {
+        public void newFollowersList(Set<String> updatedFollowers) 
+                    throws RemoteException {
             client.followers = updatedFollowers;
+        }
+
+        @Override
+        public void noMoreLoggedNotification() throws RemoteException {
+            this.client.logoutNotification.set(true);
+            
         }
     }

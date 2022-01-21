@@ -7,7 +7,7 @@ import java.text.SimpleDateFormat;
  * A simple container for various constants.
  */
 public interface Constants {
-    static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");;
+    static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("LL-dd-yyyy hh:mm:ss:SS");;
     //http
     String[] SUPPORTED_HTTP_METHODS = {"GET", "POST", "PUT", "DELETE"};
     String SUPPORTED_HTTP_VERSION = "HTTP/1.1";
@@ -16,6 +16,8 @@ public interface Constants {
     int SOCKET_READ_BUFFER_SIZE_BYTES = 8192;
 
     public File CONFIG_FILE_PATH = new File("./server/serverConfig.json");
+
+    int CLEANUP_TIMEOUT = 20000;
 
 
     enum HttpStatus {

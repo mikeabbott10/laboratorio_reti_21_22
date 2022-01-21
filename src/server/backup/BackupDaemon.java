@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 import server.util.Logger;
 import database.Database;
+import database.DatabaseImpl;
+import database.social.SocialService;
 import server.ServerMain;
 
 public class BackupDaemon implements Runnable{
@@ -66,7 +68,7 @@ public class BackupDaemon implements Runnable{
             SimpleFilterProvider filters = new SimpleFilterProvider()
                 .addFilter("socialFilter", theFilter);
             filters.setFailOnUnknownId(false);
-            mapper.writer(filters).writeValue(backupFile, db.getSocialInstance());
+            mapper.writer(filters).writeValue(backupFile, new SocialService(db.getSocialInstance(), db));
         } catch (IOException e) {
             e.printStackTrace();
         }

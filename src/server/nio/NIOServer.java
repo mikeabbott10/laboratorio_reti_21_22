@@ -1,21 +1,23 @@
 package server.nio;
 
-import java.nio.*; 
-import java.nio.channels.*;
-import java.net.*; 
-import java.util.*;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.Pipe;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import database.Database;
-import exceptions.DatabaseException;
 import exceptions.EndOfStreamException;
 import server.ServerMain;
-import server.http.handler.HttpRequestHandler;
-import server.http.response.HttpResponse;
-import server.http.response.HttpResponseBuilder;
 import server.util.Logger;
-
-import java.io.IOException;
 
 public class NIOServer {
     private static final Logger LOGGER = new Logger(NIOServer.class.getName());
@@ -24,22 +26,28 @@ public class NIOServer {
     public final int BUF_SIZE = 4096;
 
     private Selector selector;
+    private Pipe registrationPipe;
     private Database db;
 
     private final int workersAmount = 4;
     private ArrayList<Thread> workers;
 
     protected LinkedBlockingQueue<CustomRequest> requestList;
+    protected ConcurrentLinkedQueue<RegistrationParameters> pendingRegistrations;
 
     public NIOServer(int port, Database db) {
         this.port = port;
         this.db = db;
         this.requestList = new LinkedBlockingQueue<>();
+        this.pendingRegistrations = new ConcurrentLinkedQueue<>();
         this.workers = new ArrayList<>(workersAmount);
     }
 
     public Selector getSelector() {
         return selector;
+    }
+    public Pipe getRegistrationPipe() {
+        return registrationPipe;
     }
 
 
@@ -54,6 +62,10 @@ public class NIOServer {
             // add the server channel to the selector (OP_ACCEPT operation is registered)
             serverChannel.register(selector, SelectionKey.OP_ACCEPT); 
 
+            registrationPipe = Pipe.open();
+            registrationPipe.source().configureBlocking(false);
+            registrationPipe.source().register(selector, SelectionKey.OP_READ);
+
             while (!ServerMain.quit) {
                 if( selector.select() == 0 )
                     continue;
@@ -65,7 +77,13 @@ public class NIOServer {
                     iterator.remove();
                     // removes the key from Selected Set, not from registered Set
                     try {
-                        if (key.isAcceptable()) { // key channel is ready for being accepted
+                        if (key.channel() == registrationPipe.source()){
+                            var junk = ByteBuffer.allocateDirect(1);
+                            registrationPipe.source().read(junk);
+                            RegistrationParameters rp = pendingRegistrations.remove();
+                            registerOp(rp.selector, rp.clientChannel, rp.operation, rp.bb);
+                            junk.clear();
+                        }else if (key.isAcceptable()) { // key channel is ready for being accepted
                             ServerSocketChannel server = (ServerSocketChannel) key.channel();
                             SocketChannel client = server.accept(); // non blocking!
                             client.configureBlocking(false);
@@ -103,6 +121,7 @@ public class NIOServer {
             String raw = new RawRequestReader().readRaw(clientChannel);
             requestList.add(new CustomRequest(sel, clientChannel, raw, key));
         }catch(EndOfStreamException e){
+            //LOGGER.info(e.getMessage() +": "+ key.channel());
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
             LOGGER.warn(e.getMessage());
@@ -129,15 +148,22 @@ public class NIOServer {
 
     /**
      * Register the interest to the read operation on the selector
-     *
+     *  NOTE:
+     *      Selectable channels are safe for use by multiple concurrent threads.
+     *  NOTE:
+     *      A Selector and its key set are safe for use by multiple concurrent threads. 
+     *      Its selected-key set and cancelled-key set, however, are not.
+     * 
+     * channel.register adds a key in the set of keys representing 
+     * the current channel registrations of the selector.
+     * 
      * @param selector the selector used by the server
      * @param client_channel client socket channel
      * @throws IOException
      */
     protected void registerOp(Selector selector, SocketChannel client_channel, 
-                                        int operation, ByteBuffer attached) throws IOException{
+                                int operation, ByteBuffer attached) throws IOException{
         if(attached == null){ 
-            /** Invariant: here if operation == OP_READ and channelToDataMap.get(client_channel) == null */
             // create the buffer
             ByteBuffer length = ByteBuffer.allocate(Integer.BYTES);
             ByteBuffer message = ByteBuffer.allocate(BUF_SIZE);

@@ -1,6 +1,5 @@
 package server.http.response;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
@@ -13,7 +12,7 @@ import server.util.Logger;
 public final class HttpResponseBuilder {
     private static final Logger LOGGER = new Logger(HttpResponseBuilder.class.getName());
 
-    public byte[] buildHeaders(HttpResponse response) throws IOException {
+    public byte[] buildHeaders(HttpResponse response) {
         if (response.isWroteHeaders()) {
             return null;
         }

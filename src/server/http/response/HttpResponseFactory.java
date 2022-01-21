@@ -20,9 +20,9 @@ public final class HttpResponseFactory {
         return buildImmediateResponse(HttpStatus.BAD_REQUEST, responseMessage);
     }
 
-    public HttpResponse buildRequestTimeout() throws JsonMappingException, JsonProcessingException {
+    public HttpResponse buildErrorResponse(String msg) throws JsonMappingException, JsonProcessingException {
         String responseMessage = JacksonUtil.getStringFromObject( new HashMap<String, String>() {{
-            put("message", "Session timeout exceeded");
+            put("message", msg);
         }});
         return buildImmediateResponse(HttpStatus.REQUEST_TIMEOUT, responseMessage);
     }

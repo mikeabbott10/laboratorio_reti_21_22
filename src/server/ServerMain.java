@@ -1,6 +1,5 @@
 package server;
 
-import java.rmi.RemoteException;
 import java.rmi.registry.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -17,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import database.Database;
 import database.DatabaseImpl;
+import database.cloudfunctions.CleanRoutine;
 import database.social.SocialService;
 import server.backup.BackupDaemon;
 import server.multicast.RewardDaemon;
@@ -36,11 +36,14 @@ public class ServerMain {
     private static SocialService social;
 
     public static ServerRMIImplementation serverRMIService;
+    private static ServerRMIInterface stub;
+    private static Registry registry;
 
     private static NIOServer nio;
     public static boolean quit;
 
     public static ServerConfig server_config; // get it from file
+
     
     public static void main(String[] args) throws Exception {
         quit = false;
@@ -69,6 +72,10 @@ public class ServerMain {
         Thread backupThread = new Thread(new BackupDaemon(rewardThread, db));
         backupThread.start();
 
+        //logged users cleanup
+        Thread cleanupThread = new Thread(new CleanRoutine(db, Constants.CLEANUP_TIMEOUT));
+        cleanupThread.start();
+
         //nio, http server
         nio = new NIOServer(server_config.HTTP_SERVER_PORT, db);
         nio.start();
@@ -78,6 +85,8 @@ public class ServerMain {
             rewardThread.join();
             backupThread.interrupt();
             backupThread.join();
+            cleanupThread.interrupt();
+            cleanupThread.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -117,8 +126,12 @@ public class ServerMain {
     private static Runnable signalHandler(Thread currentThread) {
         return () -> {
             quit = true;
-            if(nio.getSelector() != null) 
-                nio.getSelector().wakeup();
+            try {
+                // unexport remote obj
+                UnicastRemoteObject.unexportObject(registry, true);
+            } catch (NoSuchObjectException e) {
+                e.printStackTrace();
+            }
             System.out.println("Termination signal handled");
         };
     }
@@ -126,10 +139,9 @@ public class ServerMain {
     private static void startRMIService() throws RemoteException, MalformedURLException{
         serverRMIService = new ServerRMIImplementation(db);
         // Esportazione dell'Oggetto 
-        ServerRMIInterface stub = 
-            (ServerRMIInterface) UnicastRemoteObject.exportObject(serverRMIService, 0);
+        stub = (ServerRMIInterface) UnicastRemoteObject.exportObject(serverRMIService, 0);
         // Creazione di un registry sulla porta PORT
-        LocateRegistry.createRegistry(server_config.SERVER_RMI_PORT);
+        registry = LocateRegistry.createRegistry(server_config.SERVER_RMI_PORT);
         // Pubblicazione dello stub nel registry
         Naming.rebind(server_config.RMIServerUrl + server_config.rmiServiceName, stub);
         //System.out.println("Server ready");

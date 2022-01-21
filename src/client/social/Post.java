@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @AllArgsConstructor
-public @Data class Post{
+public @Data class Post implements Comparable<Post>{
     private int id;
     private String title;
     private String content;
@@ -20,4 +20,8 @@ public @Data class Post{
     private Set<String> downvotes;
     private ConcurrentSkipListSet<PostComment> comments; // concurrent sorted set
     private Set<String> rewinnedBy;
+
+    public int compareTo(Post p) {
+        return this.id - p.getId() > 0 ? 1 : -1;
+    }
 }
