@@ -47,8 +47,8 @@ public class HttpRequestHandler {
         //#region check request validity
         HttpResponse notValidResponse = validator.validateRequest(request);
         if (notValidResponse != null) {
-            LOGGER.warn("Invalid incoming HTTP request: " + 
-                            request + ", response: " + notValidResponse);
+            // LOGGER.warn("Invalid incoming HTTP request: " + 
+            //                 request + ", response: " + notValidResponse);
             return notValidResponse;
         }
         //#endregion
@@ -56,8 +56,8 @@ public class HttpRequestHandler {
         //#region check login validity
         Object loginValidationResult = validator.validateLogin(db, request);
         if (loginValidationResult instanceof HttpResponse) {
-            LOGGER.warn("Invalid login: " + 
-                            request + ", response: " + loginValidationResult);
+            // LOGGER.warn("Invalid login: " + 
+            //                 request + ", response: " + loginValidationResult);
             return (HttpResponse) loginValidationResult;
         }
         //#endregion
@@ -176,7 +176,7 @@ public class HttpRequestHandler {
                             );
                             return new HttpResponseFactory().buildSuccess(responseMessage);
                         }catch(JsonProcessingException e){
-                            throw e;
+                            return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
                         }catch(ResourceNotFoundException ex){
                             return new HttpResponseFactory().buildNotFound(ex.getMessage());
                         }catch(ForbiddenActionException exc){
@@ -333,9 +333,12 @@ public class HttpRequestHandler {
                 }}
             );
             return new HttpResponseFactory().buildSuccess(responseMessage);
-        }catch(JsonProcessingException | DatabaseException e){
+        }catch(JsonProcessingException e){
+            return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
+        }catch(DatabaseException e){
             throw e;
-        }catch(Exception ex){
+        }
+        catch(Exception ex){
             return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
         }
     }
@@ -355,6 +358,7 @@ public class HttpRequestHandler {
                 try{
                     userFromUserID = new User( db.getUser( mappedPath.get("userID") ), db );
                 }catch(NullPointerException e){
+                    //e.printStackTrace();
                     return new HttpResponseFactory().buildNotFound("The user does not exist.");
                 }
                 
@@ -399,8 +403,7 @@ public class HttpRequestHandler {
                     }},
                     "userFilter",
                     // fields to ignore
-                    "password", "wallet", "wallet_history"
-                    
+                    "password", "wallet", "wallet_history", "last_session"
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
             }
@@ -452,7 +455,7 @@ public class HttpRequestHandler {
                     }},
                     "userFilter",
                     // fields to ignore
-                    "password", "wallet", "wallet_history"
+                    "password", "wallet", "wallet_history", "last_session"
                 );
                 return new HttpResponseFactory().buildSuccess(responseMessage);
             }

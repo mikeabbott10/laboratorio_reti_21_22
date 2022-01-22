@@ -302,14 +302,15 @@ public class DatabaseImpl implements Database{
         //User user = (User) o[1];
         if(post.getAuthor().equals(username))
             throw new ForbiddenActionException();
+        
         // need atomicity here
         synchronized(this.rateObj){
+            post.addVote(username);
+            // ***
             if(social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
                 throw new ForbiddenActionException("Upvote already inserted");
             // ***
             social.getNewUpvotes().get(postID).add(username);
-            // ***
-            post.addVote(username);
         }
     }
 
@@ -323,12 +324,12 @@ public class DatabaseImpl implements Database{
             throw new ForbiddenActionException();
         // need atomicity here
         synchronized(this.rateObj){
+            post.addDownVote(username);
+            // ***
             if(social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
                 throw new ForbiddenActionException("Downvote already inserted");
             // ***
             social.getNewDownvotes().get(postID).add(username);
-            // ***
-            post.addDownVote(username);
         }
     }
 

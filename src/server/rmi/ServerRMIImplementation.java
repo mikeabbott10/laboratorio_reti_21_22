@@ -92,21 +92,21 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
                                                     throws RemoteException {
         String username = reverseNotifyEnabledClientInterfaces.remove(clientInterface);
         if(username == null){
-            System.out.println("Unable to unregister client");
+            //System.out.println("Unable to unregister client");
             return;
         }
         notifyEnabledClientInterfaces.remove(username);
-        System.out.println("Client unregistered");
+        //System.out.println("Client unregistered");
     }
 
     public synchronized void safeUnregisterForCallback(String username){
         ClientNotifyEventInterface clientInterface = notifyEnabledClientInterfaces.remove(username);
         if(clientInterface==null){
-            System.out.println("Unable to unregister client");
+            //System.out.println("Unable to unregister client");
             return;
         }
         reverseNotifyEnabledClientInterfaces.remove(clientInterface);
-        System.out.println("Client unregistered");
+        //System.out.println("Client unregistered");
     }
 
     /*

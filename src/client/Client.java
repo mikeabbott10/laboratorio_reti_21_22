@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
@@ -91,7 +90,7 @@ public class Client {
             System.out.println(e.getMessage());
             return;
         }
-        
+
         consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
         int commandsIndex = -1;
@@ -102,15 +101,18 @@ public class Client {
             try {
                 System.out.printf("> ");
                 cmd = testEnvironment ? commands[commandsIndex] : consoleReader.readLine().trim();
-                System.out.println(cmd);
+                if(testEnvironment) 
+                    System.out.println(cmd);
             } catch (IOException e1) {
                 e1.printStackTrace();
                 break;
             }
 
             try{
-                if(logoutNotification.get())
+                if(logoutNotification.get()){
                     autoLogout();
+                    logoutNotification.set(false);
+                }
                 doWork(cmd);
             }catch(PatternSyntaxException e){
                 System.out.println("Comando non valido.");
@@ -131,7 +133,6 @@ public class Client {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("Bye!");
     }
 
     private void doWork(String cmd) {
@@ -360,11 +361,12 @@ public class Client {
                         System.out.println(name);
                     }
                 } catch (JsonProcessingException e) {
+                    //e.printStackTrace();
                     ServerResponse serverResponse;
                     try {
                         serverResponse = (ServerResponse) JacksonUtil.getObjectFromString(response, ServerResponse.class);
                     } catch (JsonProcessingException e1) {
-                        e1.printStackTrace();
+                        //e1.printStackTrace();
                         return;
                     }
                     System.out.println(serverResponse.getMessage());
@@ -490,7 +492,7 @@ public class Client {
                 e.printStackTrace();
                 return;
             }
-
+            //System.out.println("body: "+ createPostRequestBody);
             String response = createPostRequest(createPostRequestBody);
             if(response != null){
                 PostIdData sr;
@@ -529,9 +531,9 @@ public class Client {
                     System.out.println("Feed:\n");
                     for (String name : sr.feed.keySet()) {
                         for (Post post : sr.feed.get(name)) {
-                            System.out.println("Post id: " + post.getId());
-                            System.out.println("Author: " + post.getAuthor());
-                            System.out.println("Title: " + post.getTitle() + "\n");
+                            System.out.printf("Post id: " + post.getId());
+                            System.out.printf("\tAuthor: " + post.getAuthor());
+                            System.out.println("\tTitle: " + post.getTitle());
                         }
                     } 
                 } catch (Exception e) {
@@ -595,6 +597,8 @@ public class Client {
                     System.out.println(serverResponse.getMessage());
                     return;
                 }
+                if(testEnvironment)
+                    return;
                 if(sr.post.getAuthor().equals(username)){
                     //user is the post author
                     System.out.println("Do you want to delete this post? y/n");
@@ -784,7 +788,7 @@ public class Client {
          * oppure è l’autore del post) il commento non viene accettato e il server restituisce un messaggio di errore.
          * Un utente può aggiungere più di un commento ad un post
          */
-        if (Pattern.matches("^comment\\s+\\S+\\s+\\S+\\s*$", cmd)){
+        if (Pattern.matches("^comment\\s+\\S+\\s+\\S+\\s+.*\\s*$", cmd)){
             if (username == null) {
                 System.out.println("User is not logged in."); 
                 return;

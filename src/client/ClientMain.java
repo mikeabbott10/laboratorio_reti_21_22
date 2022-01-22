@@ -34,6 +34,7 @@ public class ClientMain {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("Bye!");
         System.exit(0);
     }
 

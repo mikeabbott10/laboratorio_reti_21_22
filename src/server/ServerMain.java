@@ -64,8 +64,11 @@ public class ServerMain {
             LOGGER.warn("Communication error " + e.toString());
         }
 
+        //nio, http server
+        nio = new NIOServer(server_config.HTTP_SERVER_PORT, db);
+
         //reward daemon (multicast)
-        Thread rewardThread = new Thread(new RewardDaemon(Thread.currentThread(), db));
+        Thread rewardThread = new Thread(new RewardDaemon(nio, db));
         rewardThread.start();
 
         //backup daemon
@@ -76,8 +79,7 @@ public class ServerMain {
         Thread cleanupThread = new Thread(new CleanRoutine(db, Constants.CLEANUP_TIMEOUT));
         cleanupThread.start();
 
-        //nio, http server
-        nio = new NIOServer(server_config.HTTP_SERVER_PORT, db);
+        
         nio.start();
 
         try {
@@ -115,9 +117,10 @@ public class ServerMain {
                 return mapper.readValue(stateReader, new TypeReference<SocialService>(){});
             }
         } catch (IOException e) {
-            LOGGER.warn("Failed restoring social network state : "+e.toString());
-            e.printStackTrace();
+            //LOGGER.warn("Failed restoring social network state : "+e.toString());
+            //e.printStackTrace();
         }
+        LOGGER.info("Can't retrieve old Winsome state. Welcome to your new social network!");
         return new SocialService();
 
         

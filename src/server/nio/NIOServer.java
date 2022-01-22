@@ -3,6 +3,7 @@ package server.nio;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Pipe;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -29,11 +30,13 @@ public class NIOServer {
     private Pipe registrationPipe;
     private Database db;
 
-    private final int workersAmount = 4;
+    private final int workersAmount = 2;
     private ArrayList<Thread> workers;
 
     protected LinkedBlockingQueue<CustomRequest> requestList;
     protected ConcurrentLinkedQueue<RegistrationParameters> pendingRegistrations;
+
+    public boolean end = false;
 
     public NIOServer(int port, Database db) {
         this.port = port;
@@ -107,6 +110,11 @@ public class NIOServer {
             ex.printStackTrace();
         }
         joinWorkers();
+
+        synchronized(this){
+            end = true;
+            this.notify();
+        }
     }
     
     /**
@@ -124,7 +132,8 @@ public class NIOServer {
             //LOGGER.info(e.getMessage() +": "+ key.channel());
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
-            LOGGER.warn(e.getMessage());
+            //LOGGER.warn(e.getMessage());
+            cancelKeyAndCloseChannel(key);
         }
     }
 
@@ -170,9 +179,13 @@ public class NIOServer {
             ByteBuffer[] bfs = {length, message};
             // add the client channel to the selector (OP_READ operation is registered)
             // and adds bytebuffer array [length, message] as attachment
-            client_channel.register(selector, operation, bfs);
+            try{
+                client_channel.register(selector, operation, bfs);
+            }catch(ClosedChannelException e){}
         }else{
-            client_channel.register(selector, operation, attached);
+            try{
+                client_channel.register(selector, operation, attached);
+            }catch(ClosedChannelException e){}
         }
     }
 
@@ -199,6 +212,9 @@ public class NIOServer {
 				e.printStackTrace();
 			};
 		}
+    }
+
+    public void getEnd() {
     }
 
 

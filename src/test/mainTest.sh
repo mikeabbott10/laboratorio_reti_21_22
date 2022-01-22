@@ -14,7 +14,7 @@ export BWHT
 echo -e $BWHT "
 
     STARTING STRESS TEST
-    20 Clients will run simultaneously without printing anything for ${TIMER}s
+    20 Clients will run simultaneously for ${TIMER}s
 
 " $REG
 

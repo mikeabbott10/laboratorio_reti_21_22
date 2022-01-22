@@ -3,7 +3,6 @@ package server.http.handler;
 import static server.util.Constants.SUPPORTED_HTTP_METHODS;
 import static server.util.Constants.SUPPORTED_HTTP_VERSION;
 
-import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -76,9 +75,11 @@ public class HttpRequestValidator {
     }
 
     protected HttpRequest parseRequest(String raw) throws ProtocolException {
+        System.out.println("REQUEST: "+raw);
         try {
             String[] rows = raw.split("\n");
             String[] firstRow = rows[0].split(" ");
+            System.out.println("firstRow: "+firstRow.toString());
             String method = firstRow[0].trim().toUpperCase();
             String path = firstRow[1].trim();
             String version = firstRow[2].trim();
@@ -102,6 +103,7 @@ public class HttpRequestValidator {
 
             return new HttpRequest(headers, method, path, version, body);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ProtocolException("Malformed request");
         }
     }

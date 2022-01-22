@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
-public @Data class WalletTransaction implements java.io.Serializable{
+public @Data class WalletTransaction{
     private String date;
     private double amount;
 

@@ -43,7 +43,7 @@ public class NIOWorker  implements Runnable{
                 try {
                     response = requestHandler.handleRequest(this.db, req);
                 } catch (JsonProcessingException | ProtocolException e) {
-                    //e.printStackTrace();
+                    e.printStackTrace();
                     continue;
                 }
                 if(response == null) continue;

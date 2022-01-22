@@ -48,7 +48,7 @@ public class BackupDaemon implements Runnable{
         try {
             rewardThread.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         backupRoutine(); // once more after all stopped
         return;
@@ -64,13 +64,13 @@ public class BackupDaemon implements Runnable{
         mapper.enable(SerializationFeature.INDENT_OUTPUT); // indent the output decent way
         try {
             SimpleBeanPropertyFilter theFilter = SimpleBeanPropertyFilter
-                .serializeAllExcept("loggedUsers");
+                .serializeAllExcept("loggedUsers", "newUpvotes", "newDownvotes", "newComments");
             SimpleFilterProvider filters = new SimpleFilterProvider()
                 .addFilter("socialFilter", theFilter);
             filters.setFailOnUnknownId(false);
             mapper.writer(filters).writeValue(backupFile, new SocialService(db.getSocialInstance(), db));
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
     }
 
@@ -85,7 +85,7 @@ public class BackupDaemon implements Runnable{
                     //LOGGER.info(bkp.getAbsolutePath());
                 } catch (IOException e) {
                     LOGGER.warn("Error creating backup files");
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         });

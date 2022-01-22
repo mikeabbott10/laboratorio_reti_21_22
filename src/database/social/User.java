@@ -19,16 +19,16 @@ import server.util.Constants;
 
 @NoArgsConstructor
 @JsonFilter("userFilter") // ignore some field serializing with this filter name
-public class User implements java.io.Serializable, Comparable<User>{
+public class User implements Comparable<User>{
     private String username; // username is the User ID
     private Password password;
-    private Set<Integer> posts;
+    private Set<Integer>  posts;
     private String[] tags; // unmodifiable
     private Set<String> followers; // users who follow this
-    private Set<String> following; // users this follows
+    private Set<String>  following; // users this follows
     private AtomicDouble wallet;
     private Set<WalletTransaction> wallet_history;
-    private Date last_session;
+    private Date last_session = new Date();
     
     public User(SocialService social, String username, String password, String[] tags) 
                         throws NoSuchAlgorithmException, InvalidKeySpecException{

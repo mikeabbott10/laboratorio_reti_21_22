@@ -45,21 +45,33 @@ public class HttpRequests {
     }
 
     public static String put(String url, String parameters, String username, String password) throws IOException {
-        StringBuilder content;
+        StringBuilder content = new StringBuilder();
         byte[] putData = null;
-        if(parameters!=null) 
+        int length = -1;
+        if(parameters!=null) {
             putData = parameters.getBytes(StandardCharsets.UTF_8);
+            length = putData.length;
+        }
         HttpURLConnection con = null;
+        InputStream readHere = null;
         try {
             var myurl = new URL(url);
             con = (HttpURLConnection) myurl.openConnection();
 
             con.setDoOutput(true);
             con.setRequestMethod("PUT");
+
+            if(parameters!=null){
+                con.setFixedLengthStreamingMode(length);
+                con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            }else{
+                con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            }
             con.setRequestProperty("User-Agent", "Java client");
-            con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             con.setRequestProperty("username", username);
             con.setRequestProperty("password", password);
+
+            con.connect();
 
             if(parameters!=null){
                 try (var wr = new DataOutputStream(con.getOutputStream())) {
@@ -67,8 +79,6 @@ public class HttpRequests {
                 }
             }
             
-            InputStream readHere = null;
-
             if(con.getResponseCode()>200){
                 //unauhthorized
                 readHere = con.getErrorStream();
@@ -85,10 +95,14 @@ public class HttpRequests {
                     content.append(System.lineSeparator());
                 }
             }
+            
             //System.out.println(content.toString());
 
-        } finally {
+        }catch(Exception e){
+            e.printStackTrace();
+        }finally {
             con.disconnect();
+            readHere.close();
         }
         return content.toString();
     }
@@ -97,6 +111,7 @@ public class HttpRequests {
         StringBuilder content;
         byte[] postData = parameters.getBytes(StandardCharsets.UTF_8);
         HttpURLConnection con = null;
+        InputStream readHere = null;
         try {
 
             var myurl = new URL(url);
@@ -104,16 +119,18 @@ public class HttpRequests {
 
             con.setDoOutput(true);
             con.setRequestMethod("POST");
+
+            con.setFixedLengthStreamingMode(postData.length);
             con.setRequestProperty("User-Agent", "Java client");
-            con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             con.setRequestProperty("username", username);
             con.setRequestProperty("password", password);
+
+            con.connect();
 
             try (var wr = new DataOutputStream(con.getOutputStream())) {
                 wr.write(postData);
             }
-
-            InputStream readHere = null;
 
             if(con.getResponseCode()>200){
                 //unauhthorized
@@ -136,6 +153,7 @@ public class HttpRequests {
 
         } finally {
             con.disconnect();
+            readHere.close();
         }
         return content.toString();
 

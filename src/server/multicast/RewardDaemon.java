@@ -19,15 +19,16 @@ import database.social.Post;
 import database.social.User;
 import exceptions.ResourceNotFoundException;
 import server.ServerMain;
+import server.nio.NIOServer;
 import server.util.Logger;
 
 public class RewardDaemon implements Runnable{
     private Logger LOGGER = new Logger(RewardDaemon.class.getName());
     private Database db;
-    private Thread nioThread;
+    private NIOServer nio;
 
-    public RewardDaemon(Thread nioThread, Database db){
-        this.nioThread = nioThread;
+    public RewardDaemon(NIOServer nio, Database db){
+        this.nio= nio;
         this.db = db;
     }
 
@@ -36,7 +37,6 @@ public class RewardDaemon implements Runnable{
     public void run() {
         try (DatagramSocket skt = new DatagramSocket(ServerMain.server_config.MULTICAST_PORT +1 )) {
             while (!Thread.currentThread().isInterrupted() && !ServerMain.quit ) {
-                //System.out.println("PIPPO");
                 byte[] msg = "Rewards calculated".getBytes();
                 try {
                     DatagramPacket datagram = new DatagramPacket(msg, msg.length,
@@ -55,10 +55,16 @@ public class RewardDaemon implements Runnable{
                     Thread.sleep(ServerMain.server_config.REWARD_TIMEOUT);
                 } catch (InterruptedException ignored){}
             }
-            try {
-                nioThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+
+            // wait until nio workers end
+            synchronized (nio){
+                while (!nio.end) {
+                    try {
+                        nio.wait();
+                    }catch (InterruptedException ex){
+                        ex.printStackTrace();
+                    }
+                }
             }
             //LOGGER.info("Performing last reward calculation");
             rewardCalculator(); // once more after all stopped
@@ -97,6 +103,8 @@ public class RewardDaemon implements Runnable{
         modifiedPosts.addAll(newUpvotes.keySet());
         modifiedPosts.addAll(newDownvotes.keySet());
         modifiedPosts.addAll(newComments.keySet());
+
+        System.out.println(modifiedPosts); 
 
         // foreach post with new interactions
         modifiedPosts.forEach((id) -> {
