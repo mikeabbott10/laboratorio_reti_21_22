@@ -788,7 +788,7 @@ public class Client {
          * oppure è l’autore del post) il commento non viene accettato e il server restituisce un messaggio di errore.
          * Un utente può aggiungere più di un commento ad un post
          */
-        if (Pattern.matches("^comment\\s+\\S+\\s+\\S+\\s+.*\\s*$", cmd)){
+        if (Pattern.matches("^comment\\s+\\S+\\s+\\S+.*$", cmd)){
             if (username == null) {
                 System.out.println("User is not logged in."); 
                 return;

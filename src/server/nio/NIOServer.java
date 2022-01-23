@@ -10,8 +10,11 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -24,17 +27,18 @@ public class NIOServer {
     private static final Logger LOGGER = new Logger(NIOServer.class.getName());
     
     private final int port;
-    public final int BUF_SIZE = 4096;
+    public final int BUF_SIZE = 8192;
 
     private Selector selector;
     private Pipe registrationPipe;
     private Database db;
 
-    private final int workersAmount = 2;
+    private final int workersAmount = 4;
     private ArrayList<Thread> workers;
 
     protected LinkedBlockingQueue<CustomRequest> requestList;
     protected ConcurrentLinkedQueue<RegistrationParameters> pendingRegistrations;
+    protected ConcurrentHashMap<SocketChannel, ChannelData> channelToDataMap;
 
     public boolean end = false;
 
@@ -44,6 +48,7 @@ public class NIOServer {
         this.requestList = new LinkedBlockingQueue<>();
         this.pendingRegistrations = new ConcurrentLinkedQueue<>();
         this.workers = new ArrayList<>(workersAmount);
+        this.channelToDataMap = new ConcurrentHashMap<>();
     }
 
     public Selector getSelector() {
@@ -127,7 +132,40 @@ public class NIOServer {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         try{
             String raw = new RawRequestReader().readRaw(clientChannel);
-            requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+            // pre parse to wait for whole request (post and put with body come here twice)
+            int contentLength;
+            if((contentLength = containsContentLength(raw)) == -2){
+                // it's the body
+                ChannelData prevData = channelToDataMap.get(clientChannel);
+                if(prevData!=null){
+                    channelToDataMap.remove(clientChannel);
+                    requestList.add(new CustomRequest(sel, clientChannel, prevData.getMessage() + raw, key));
+                }else{
+                    // never here
+                    assert true == false;
+                }
+            }else if(contentLength == -1){
+                // it's an http request containing no body (it contains method, path, http version and headers)
+                channelToDataMap.remove(clientChannel);
+                requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+            }else{
+                //System.out.println("NIOServer.readClientMessage - contentLength:  "+contentLength);
+                // it's an http request which should contain body
+                if(containsBody(raw, contentLength)){
+                    //System.out.println("contiene body");
+                    channelToDataMap.remove(clientChannel);
+                    requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+                }else{
+                    //System.out.println("NON contiene body");
+                    ChannelData cd = new ChannelData();
+                    cd.setMessage(raw);
+                    cd.setMissingBytes(contentLength);
+                    channelToDataMap.put(clientChannel, cd);
+                    //System.out.printf("Server: ricevuto \n%s\n", message);
+                    registerOp(sel, clientChannel, SelectionKey.OP_READ, null);
+                }
+
+            }
         }catch(EndOfStreamException e){
             //LOGGER.info(e.getMessage() +": "+ key.channel());
             cancelKeyAndCloseChannel(key);
@@ -135,7 +173,59 @@ public class NIOServer {
             //LOGGER.warn(e.getMessage());
             cancelKeyAndCloseChannel(key);
         }
+        /*SocketChannel clientChannel = (SocketChannel) key.channel();
+        try{
+            String raw = new RawRequestReader().readRaw(clientChannel);
+            requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+        }catch(EndOfStreamException e){
+            //LOGGER.info(e.getMessage() +": "+ key.channel());
+            cancelKeyAndCloseChannel(key);
+        } catch (IOException e) {
+            //LOGGER.warn(e.getMessage());
+            cancelKeyAndCloseChannel(key);
+        }*/
     }
+
+    private boolean containsBody(String raw, int contentLength) {
+        final String eol = "\r\n\r\n" ;
+        try {
+            String body = raw.split(eol)[1];
+            //System.out.println("NIOServer.containsBody - body.length(): "+ body.length());
+            //System.out.println("NIOServer.containsBody - body: "+ body);
+            if(body.length() == contentLength)
+                return true;
+        }catch(Exception e){
+            //e.printStackTrace();
+        }
+        return false;
+    }
+
+    private int containsContentLength(String raw) {
+        //System.out.println("NIOServer.containsContentLength - request: "+raw);
+        try {
+            String[] rows = raw.split("\n");
+            //System.out.println("NIOServer.containsContentLength - 1");
+            if(rows.length <= 2) // this is the body of the req
+                return -2;
+            //System.out.println("NIOServer.containsContentLength - 2");
+            for (String row : rows) {
+                //System.out.println("NIOServer.containsContentLength - "+ row);
+                if(row.equals("\r")) return -1; // eol without \n
+                String[] arr = row.split(":");
+                String key = new String(arr[0].trim());
+                //System.out.println("NIOServer.containsContentLength - key: "+key);
+                if(key.equals("Content-Length")){
+                    if(new String(arr[1].trim()).equals("0"))
+                        return -1;
+                    return Integer.parseInt(new String(arr[1].trim()));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
 
     /**
      * Write the attached buffer to the channel related to key 
@@ -172,21 +262,13 @@ public class NIOServer {
      */
     protected void registerOp(Selector selector, SocketChannel client_channel, 
                                 int operation, ByteBuffer attached) throws IOException{
-        if(attached == null){ 
-            // create the buffer
-            ByteBuffer length = ByteBuffer.allocate(Integer.BYTES);
-            ByteBuffer message = ByteBuffer.allocate(BUF_SIZE);
-            ByteBuffer[] bfs = {length, message};
-            // add the client channel to the selector (OP_READ operation is registered)
-            // and adds bytebuffer array [length, message] as attachment
-            try{
-                client_channel.register(selector, operation, bfs);
-            }catch(ClosedChannelException e){}
-        }else{
-            try{
+        try{
+            if(attached == null){
+                client_channel.register(selector, operation);
+            }else{
                 client_channel.register(selector, operation, attached);
-            }catch(ClosedChannelException e){}
-        }
+            }
+        }catch(ClosedChannelException e){}
     }
 
     protected void cancelKeyAndCloseChannel(SelectionKey key) {
@@ -213,9 +295,5 @@ public class NIOServer {
 			};
 		}
     }
-
-    public void getEnd() {
-    }
-
 
 }

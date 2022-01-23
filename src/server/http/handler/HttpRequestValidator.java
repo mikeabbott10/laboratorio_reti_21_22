@@ -75,11 +75,11 @@ public class HttpRequestValidator {
     }
 
     protected HttpRequest parseRequest(String raw) throws ProtocolException {
-        System.out.println("REQUEST: "+raw);
+        //System.out.println("HttpRequestHandler.parseRequest - request: "+raw);
         try {
             String[] rows = raw.split("\n");
             String[] firstRow = rows[0].split(" ");
-            System.out.println("firstRow: "+firstRow.toString());
+            //System.out.println("HttpRequestHandler.parseRequest - firstRow: "+firstRow.toString());
             String method = firstRow[0].trim().toUpperCase();
             String path = firstRow[1].trim();
             String version = firstRow[2].trim();
@@ -103,7 +103,7 @@ public class HttpRequestValidator {
 
             return new HttpRequest(headers, method, path, version, body);
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             throw new ProtocolException("Malformed request");
         }
     }

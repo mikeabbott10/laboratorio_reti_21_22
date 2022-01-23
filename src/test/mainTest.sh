@@ -2,7 +2,7 @@
 #TEST3 (aka stress test)
 BWHT="\033[1;37m"
 REG=$(tput sgr0)
-TIMER=40
+TIMER=600
 LIB=../../lib/*:../
 export BWHT
 

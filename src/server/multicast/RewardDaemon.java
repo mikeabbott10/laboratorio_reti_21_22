@@ -8,6 +8,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap.KeySetView;
 import java.util.function.Function;
@@ -107,7 +108,9 @@ public class RewardDaemon implements Runnable{
         System.out.println(modifiedPosts); 
 
         // foreach post with new interactions
-        modifiedPosts.forEach((id) -> {
+        Iterator <Integer> it = modifiedPosts.iterator();
+        while (it.hasNext()) {
+            int id = it.next();
             if (posts.containsKey(id)) { // post still exists
                 boolean anyUpvotes = newUpvotes.containsKey(id);
                 boolean anyDownvotes = newDownvotes.containsKey(id);
@@ -168,11 +171,11 @@ public class RewardDaemon implements Runnable{
                 });
 
             }
-            modifiedPosts.remove(id);
+            it.remove();
             db.removeIdFromNewUpvotes(id);
             db.removeIdFromNewDownvotes(id);
             db.removeIdFromNewComments(id);
-        });
+        }
     }
     
 }

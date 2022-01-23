@@ -29,6 +29,7 @@ public final class RawRequestReader {
             }
 
             readBuffer.flip();
+
             byte[] bytes = new byte[readBuffer.limit()];
             readBuffer.get(bytes);
             sb.append(new String(bytes));

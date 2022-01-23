@@ -5,11 +5,16 @@ LIB=../../lib/*:../
 CLI=client.ClientMain
 
 clients=(
-    'java -cp '$LIB' '$CLI' "reward notification|register u1 pas1 politica"'
-    'java -cp '$LIB' '$CLI' "reward notification|register u2 pas2 teatro"'
-    'java -cp '$LIB' '$CLI' "reward notification|register u3 pas3 arte teatro"'
-    'java -cp '$LIB' '$CLI' "reward notification|register u4 pas4 sport"'
-    'java -cp '$LIB' '$CLI' "reward notification|register u5 pas5 arte sport"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u21 pas21 politica"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u22 pas22 teatro tag0"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u23 pas23 arte teatro tag0"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u24 pas24 sport"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u25 pas25 politica"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u26 pas26 teatro tag0"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u27 pas27 arte teatro tag0"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u28 pas28 sport"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u29 pas29 arte sport tag0"'
+    'java -cp '$LIB' '$CLI' "reward notification|register u30 pas30 politica"'
     )
 
 i=0
