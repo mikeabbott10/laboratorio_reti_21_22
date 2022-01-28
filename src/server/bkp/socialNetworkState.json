@@ -1501,7 +1501,7 @@
         "date" : "01-27-2022 00:46:54:22",
         "amount" : 0.002632204483139033
       } ],
-      "last_session" : 1643324756566
+      "last_session" : 1643385294922
     },
     "u19" : {
       "username" : "u19",
@@ -13491,7 +13491,7 @@
     }
   },
   "postIdCounter" : 523,
-  "rewardRoutineAge" : 246,
+  "rewardRoutineAge" : 268,
   "tagsUsers" : {
     "tag0" : [ "u6", "u7", "u22", "u12", "u23", "u17", "u16", "u27", "u19" ],
     "tag1" : [ "u9", "u2", "u3" ],
