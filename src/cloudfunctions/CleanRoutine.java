@@ -1,4 +1,4 @@
-package database.cloudfunctions;
+package cloudfunctions;
 
 import database.social.User;
 
@@ -20,7 +20,7 @@ public class CleanRoutine implements Runnable{
     @Override
     public void run() {
         // cleanup social.loggedUsers removing unactive users
-        while(!ServerMain.quit && !Thread.currentThread().isInterrupted()){ // this should be like a cloud function call, keep it simple here
+        while(!ServerMain.quit && !Thread.currentThread().isInterrupted()){
             try {
                 Thread.sleep(timeout);
             } catch (InterruptedException e) {
@@ -37,12 +37,13 @@ public class CleanRoutine implements Runnable{
                         // remove user
                         it.remove();
                         // remove from rmi callback registered set
+                        // these should be cloud function responses to server. keep it simple
                         server.ServerMain.serverRMIService.sendLogoutNotification(uname);
                         server.ServerMain.serverRMIService.safeUnregisterForCallback(uname);
                     }
                 }catch(NullPointerException e){
                     // not possible here
-                    // maybe working on a user which is now deleted from another thread
+                    // working on a user which is now deleted from another thread
                     continue;
                 }
             }

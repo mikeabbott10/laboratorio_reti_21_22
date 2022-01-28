@@ -71,7 +71,7 @@ public class HttpRequests {
             con.setRequestProperty("username", username);
             con.setRequestProperty("password", password);
 
-            con.connect();
+            con.connect(); // establish the actual network connection
 
             if(parameters!=null){
                 try (var wr = new DataOutputStream(con.getOutputStream())) {
@@ -79,7 +79,7 @@ public class HttpRequests {
                 }
             }
             
-            if(con.getResponseCode()>200){
+            if(con.getResponseCode()>200){ // we only use 200 for success operations
                 //unauhthorized
                 readHere = con.getErrorStream();
             }else{
@@ -126,13 +126,13 @@ public class HttpRequests {
             con.setRequestProperty("username", username);
             con.setRequestProperty("password", password);
 
-            con.connect();
+            con.connect(); // establish the actual network connection
 
             try (var wr = new DataOutputStream(con.getOutputStream())) {
                 wr.write(postData);
             }
 
-            if(con.getResponseCode()>200){
+            if(con.getResponseCode()>200){// we only use 200 for success operations
                 //unauhthorized
                 readHere = con.getErrorStream();
             }else{

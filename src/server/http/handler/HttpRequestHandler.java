@@ -27,26 +27,35 @@ import server.http.response.HttpResponse;
 import server.http.response.HttpResponseFactory;
 import server.nio.CustomRequest;
 import server.util.JacksonUtil;
-import server.util.Logger;
 
+/**
+ * Handle http requests
+ */
 public class HttpRequestHandler {
-    private static final Logger LOGGER = new Logger(HttpRequestHandler.class.getName());
-
     private HttpRequestValidator validator;
 
     public HttpRequestHandler() {
         this.validator = new HttpRequestValidator();
     }
 
+    /**
+     * Handle the http request req
+     * @param db
+     * @param req
+     * @return http response
+     * @throws DatabaseException database error
+     * @throws ProtocolException bad request format
+     * @throws JsonProcessingException serialization error
+     */
     public HttpResponse handleRequest(Database db, CustomRequest req) 
             throws DatabaseException, ProtocolException, JsonProcessingException{
         HttpRequest request = new HttpRequestValidator().parseRequest(req.getMessage());
-        //LOGGER.info("Parsed incoming HTTP request: " + request);
+        //System.out.println("Parsed incoming HTTP request: " + request);
 
         //#region check request validity
         HttpResponse notValidResponse = validator.validateRequest(request);
         if (notValidResponse != null) {
-            // LOGGER.warn("Invalid incoming HTTP request: " + 
+            // System.out.println("Invalid incoming HTTP request: " + 
             //                 request + ", response: " + notValidResponse);
             return notValidResponse;
         }
@@ -55,7 +64,7 @@ public class HttpRequestHandler {
         //#region check login validity
         Object loginValidationResult = validator.validateLogin(db, request);
         if (loginValidationResult instanceof HttpResponse) {
-            // LOGGER.warn("Invalid login: " + 
+            // System.out.println("Invalid login: " + 
             //                 request + ", response: " + loginValidationResult);
             return (HttpResponse) loginValidationResult;
         }
@@ -91,6 +100,14 @@ public class HttpRequestHandler {
     }
 
     //#region PUT, DELETE, POST, GET handling
+    /**
+     * Handle an http put request
+     * @param db
+     * @param request
+     * @param user the user who did the request
+     * @return
+     * @throws JsonProcessingException
+     */
     private HttpResponse PUTRequestHandler(Database db, HttpRequest request, User user) 
             throws JsonProcessingException {
         Map<String, String> mappedPath = validator.PUTPathValidation(request);
@@ -261,7 +278,6 @@ public class HttpRequestHandler {
 
                 ServerMain.serverRMIService.updateFollowersList( user );
                 
-
                 String responseMessage = JacksonUtil.getStringFromObject( 
                     new HashMap<String, String>() {{
                         put("multicast_group_ip", ServerMain.server_config.MULTICAST_ADDRESS);
@@ -274,6 +290,14 @@ public class HttpRequestHandler {
         return new HttpResponseFactory().buildBadRequest("Protocol error occurred");
     }
 
+    /**
+     * Handle an http delete request
+     * @param db
+     * @param request
+     * @param user the user who did the request
+     * @return
+     * @throws JsonProcessingException
+     */
     private HttpResponse DELETERequestHandler(Database db, HttpRequest request, User user) 
             throws JsonProcessingException {
         // only one action: remove post
@@ -308,6 +332,14 @@ public class HttpRequestHandler {
         }
     }
 
+    /**
+     * Handle an http post request
+     * @param db
+     * @param request
+     * @param user the user who did the request
+     * @return
+     * @throws JsonProcessingException
+     */
     private HttpResponse POSTRequestHandler(Database db, HttpRequest request, User user) 
             throws JsonProcessingException, DatabaseException {
         // only one action: create post
@@ -342,6 +374,14 @@ public class HttpRequestHandler {
         }
     }
 
+    /**
+     * Handle an http get request
+     * @param db
+     * @param request
+     * @param user the user who did the request
+     * @return
+     * @throws JsonProcessingException
+     */
     private HttpResponse GETRequestHandler(Database db, HttpRequest request, User user) 
             throws JsonProcessingException {
         Map<String, String> mappedPath = validator.GETPathValidation(request);
@@ -487,11 +527,11 @@ public class HttpRequestHandler {
     private double getBitcoinWallet(double userWallet) throws IOException, InterruptedException {
         if (userWallet == 0.0) return 0.0;
         String res = performGETRequestTo("https://www.random.org/decimal-fractions/?num=1&dec=10&col=1&format=plain&rnd=new");
-        //LOGGER.info("WALLET -------> "+ res);
+        //System.out.println("WALLET -------> "+ res);
         return userWallet * Double.parseDouble(res.toString());
     }
 
-    public static String performGETRequestTo(String uri) throws IOException, InterruptedException {
+    private String performGETRequestTo(String uri) throws IOException, InterruptedException {
         HttpClient client = HttpClient.newHttpClient();
         java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                 .uri(URI.create(uri))

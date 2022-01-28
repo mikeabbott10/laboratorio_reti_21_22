@@ -10,9 +10,8 @@ import static server.util.Constants.SUPPORTED_HTTP_VERSION;
  * state of transitioning the response over the wire.
  */
 public final class HttpResponse {
-
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat(
-        "EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+    private static final SimpleDateFormat dateFormat = 
+        new SimpleDateFormat("LL-dd-yyyy HH:mm:ss:SS");
 
     static {
         dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
@@ -32,7 +31,7 @@ public final class HttpResponse {
     public void addDefaultHeaders() {
         Calendar calendar = Calendar.getInstance();
         this.headers.put("Date", dateFormat.format(calendar.getTime()));
-        this.headers.put("Server", "Simple NIO HTTP Server v1.0.0");
+        this.headers.put("Server", "Winsome HTTP Server v1.0.0");
         this.headers.put("Connection", "closeSilently");
         this.headers.put("Content-Length", Long.toString(contentLength));
     }

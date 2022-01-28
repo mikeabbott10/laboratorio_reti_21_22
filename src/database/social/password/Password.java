@@ -3,7 +3,6 @@ package database.social.password;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 /**
@@ -12,7 +11,7 @@ import lombok.NoArgsConstructor;
  * 
  */
 @NoArgsConstructor
-public @Data class Password implements java.io.Serializable, Comparable<Password>{
+public @Data class Password implements Comparable<Password>{
     private String hashedPwd;
 
     public Password(String password) throws NoSuchAlgorithmException, InvalidKeySpecException{

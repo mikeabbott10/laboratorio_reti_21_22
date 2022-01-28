@@ -3,7 +3,6 @@ package client;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.rmi.RemoteException;
 
 import com.fasterxml.jackson.core.exc.StreamReadException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -16,6 +15,7 @@ import client.util.Constants;
 public class ClientMain {
     public static boolean quit;
     static Client client;
+    
     public static void main(String[] args){
         quit = false;
         // termination handling

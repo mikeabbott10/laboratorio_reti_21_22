@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
-public @Data class ClientConfig implements java.io.Serializable{
+public @Data class ClientConfig{
     // rmi
     public int SERVER_RMI_PORT = 25258;
     public String SERVER_IP = "localhost";

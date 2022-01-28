@@ -4,14 +4,10 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 
-import server.util.Logger;
-
 /**
  * A simple class that is able to write {@link HttpResponse} over the socket.
  */
 public final class HttpResponseBuilder {
-    private static final Logger LOGGER = new Logger(HttpResponseBuilder.class.getName());
-
     public byte[] buildHeaders(HttpResponse response) {
         if (response.isWroteHeaders()) {
             return null;
@@ -31,7 +27,7 @@ public final class HttpResponseBuilder {
         sb.append("\r\n");
 
         response.markAsWroteHeaders();
-        //LOGGER.info(sb.toString());
+        //System.out.println(sb.toString());
         return sb.toString().getBytes();
     }
 

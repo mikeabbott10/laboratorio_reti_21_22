@@ -1,6 +1,5 @@
 package server.nio;
 
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -17,9 +16,6 @@ public class CustomRequest {
         this.client_channel = client_channel;
         this.message = message;
         this.key = key;
-    }
-
-    public CustomRequest(Selector sel, SelectableChannel channel, SelectionKey key2) {
     }
 
     public Selector getSelector() {

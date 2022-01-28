@@ -10,29 +10,23 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
-import server.util.Logger;
 import database.Database;
-import database.DatabaseImpl;
 import database.social.SocialService;
 import server.ServerMain;
 
-public class BackupDaemon implements Runnable{
-    private Logger LOGGER = new Logger(BackupDaemon.class.getName());
-
+/**
+ * Save the server state on file with this routine.
+ */
+public class BackupRoutine implements Runnable{
     private Database db;
     public static File backupFile = new File(ServerMain.server_config.BACKUP_DIRECTORY+ "socialNetworkState.json");
-
     private Thread rewardThread;
-    
 
-    public BackupDaemon(Thread rewardThread, Database db) {
+    public BackupRoutine(Thread rewardThread, Database db) {
         this.rewardThread = rewardThread;
         this.db = db;
-
-        /*Path currentRelativePath = Paths.get("");
-        String s = currentRelativePath.toAbsolutePath().toString();
-        System.out.println("Current absolute path is: " + s);*/
     }
+
 
     @Override
     public void run() {
@@ -82,9 +76,9 @@ public class BackupDaemon implements Runnable{
             if (!bkp.exists()){
                 try {
                     bkp.createNewFile();
-                    //LOGGER.info(bkp.getAbsolutePath());
+                    //System.out.println(bkp.getAbsolutePath());
                 } catch (IOException e) {
-                    LOGGER.warn("Error creating backup files");
+                    System.out.println("Error creating backup files");
                     //e.printStackTrace();
                 }
             }

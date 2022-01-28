@@ -5,6 +5,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap.KeySetView;
@@ -46,6 +47,12 @@ public class DatabaseImpl implements Database{
         return social.getUsers().get(username);
     }
 
+    /**
+     * query simulation:
+     *      SELECT * FROM users
+     * @param username
+     * @return the user in the db or null
+     */
     @Override
     public ConcurrentHashMap<String, User> getUsers() {
         return social.getUsers();
@@ -110,12 +117,14 @@ public class DatabaseImpl implements Database{
         Post p = social.removePost(postID);
         if( p != null ){
             // p.getRewinnedBy can be modified by this.rewinPost
-            p.getRewinnedBy().forEach((String uname) -> {
+            Iterator<String> i = p.getRewinnedBy().iterator();
+            while(i.hasNext()){
+                String uname = i.next();
                 User u = social.getUsers().get(uname);
                 if(u!=null){
                     u.removePost(postID);
                 }
-            });
+            }
             return;
         }
         throw new ResourceNotFoundException("Post not found");
@@ -271,7 +280,7 @@ public class DatabaseImpl implements Database{
         //User user = (User) o[1];
         if(post.addComment(author, comment) == false)
             throw new ForbiddenActionException("Cannot add this comment.");
-        // if at *** i use call getNewComments from rewardThread i get inconsistency: 
+        // if at *** i call getNewComments from rewardThread i get inconsistency: 
         // need atomicity here
         synchronized(this.commentObj){
             social.getNewComments().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
@@ -307,10 +316,10 @@ public class DatabaseImpl implements Database{
         synchronized(this.rateObj){
             post.addVote(username);
             // ***
-            if(social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
-                throw new ForbiddenActionException("Upvote already inserted");
+            social.getNewUpvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
             // ***
-            social.getNewUpvotes().get(postID).add(username);
+            if(social.getNewUpvotes().get(postID).add(username)==false)
+                throw new ForbiddenActionException("Upvote already inserted");
         }
     }
 
@@ -326,10 +335,10 @@ public class DatabaseImpl implements Database{
         synchronized(this.rateObj){
             post.addDownVote(username);
             // ***
-            if(social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet())!=null)
-                throw new ForbiddenActionException("Downvote already inserted");
+            social.getNewDownvotes().putIfAbsent(postID, ConcurrentHashMap.newKeySet());
             // ***
-            social.getNewDownvotes().get(postID).add(username);
+            if(social.getNewDownvotes().get(postID).add(username)==false)
+                throw new ForbiddenActionException("Downvote already inserted");
         }
     }
 

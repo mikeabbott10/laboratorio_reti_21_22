@@ -24,6 +24,10 @@ public class ClientNotifyEventImplementation extends RemoteObject
             client.followers = updatedFollowers;
         }
 
+        /**
+        * Called by server to notify the user is no more logged in
+        * @throws RemoteException
+        */
         @Override
         public void noMoreLoggedNotification() throws RemoteException {
             this.client.logoutNotification.set(true);

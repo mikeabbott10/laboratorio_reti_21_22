@@ -42,7 +42,7 @@ public class MulticastNotificationReceiver implements Runnable{
                 this.multicastSocket.receive(dp); // blocking
                 //System.out.println("Received: "+ dp.getData());
             }catch(SocketTimeoutException e){
-                //System.out.println("udp timed out");
+                //System.out.println("timed out");
                 continue;
             }catch (IOException e) {
                 e.printStackTrace();

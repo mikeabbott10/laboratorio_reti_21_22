@@ -14,22 +14,19 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import cloudfunctions.CleanRoutine;
 import database.Database;
 import database.DatabaseImpl;
-import database.cloudfunctions.CleanRoutine;
 import database.social.SocialService;
-import server.backup.BackupDaemon;
-import server.multicast.RewardDaemon;
+import server.backup.BackupRoutine;
+import server.multicast.RewardRoutine;
 import server.nio.NIOServer;
 import server.rmi.ServerRMIImplementation;
 import server.rmi.ServerRMIInterface;
 import server.util.Constants;
-import server.util.Logger;
 import server.util.ServerConfig;
 
 public class ServerMain {
-    private static Logger LOGGER = new Logger(ServerMain.class.getName());
-
     public static InetAddress localhostAddr;
     
     public static Database db;
@@ -48,6 +45,7 @@ public class ServerMain {
     public static void main(String[] args) throws Exception {
         quit = false;
         
+        // server configuration
         server_config = getServerConfig();
 
         // server state
@@ -61,25 +59,24 @@ public class ServerMain {
         try{
             startRMIService();
         }catch (MalformedURLException | RemoteException e) {
-            LOGGER.warn("Communication error " + e.toString());
+            System.out.println("Communication error " + e.toString());
         }
 
         //nio, http server
         nio = new NIOServer(server_config.HTTP_SERVER_PORT, db);
 
         //reward daemon (multicast)
-        Thread rewardThread = new Thread(new RewardDaemon(nio, db));
+        Thread rewardThread = new Thread(new RewardRoutine(nio, db));
         rewardThread.start();
 
         //backup daemon
-        Thread backupThread = new Thread(new BackupDaemon(rewardThread, db));
+        Thread backupThread = new Thread(new BackupRoutine(rewardThread, db));
         backupThread.start();
 
         //logged users cleanup
         Thread cleanupThread = new Thread(new CleanRoutine(db, Constants.CLEANUP_TIMEOUT));
         cleanupThread.start();
 
-        
         nio.start();
 
         try {
@@ -112,20 +109,25 @@ public class ServerMain {
     public static SocialService getServerStateFromBackup() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            if (BackupDaemon.backupFile.exists()) {
-                BufferedReader stateReader = new BufferedReader(new FileReader(BackupDaemon.backupFile));
+            if (BackupRoutine.backupFile.exists()) {
+                BufferedReader stateReader = new BufferedReader(new FileReader(BackupRoutine.backupFile));
                 return mapper.readValue(stateReader, new TypeReference<SocialService>(){});
             }
         } catch (IOException e) {
-            //LOGGER.warn("Failed restoring social network state : "+e.toString());
+            //System.out.println("Failed restoring social network state : "+e.toString());
             //e.printStackTrace();
         }
-        LOGGER.info("Can't retrieve old Winsome state. Welcome to your new social network!");
+        System.out.println("Can't retrieve old Winsome state. Welcome to your new social network!");
         return new SocialService();
 
         
     }
 
+    /**
+     * Handle the termination signal
+     * @param currentThread
+     * @return
+     */
     private static Runnable signalHandler(Thread currentThread) {
         return () -> {
             quit = true;
@@ -135,10 +137,15 @@ public class ServerMain {
             } catch (NoSuchObjectException e) {
                 e.printStackTrace();
             }
-            System.out.println("Termination signal handled");
+            //System.out.println("Termination signal handled");
         };
     }
 
+    /**
+     * Start RMI service
+     * @throws RemoteException
+     * @throws MalformedURLException
+     */
     private static void startRMIService() throws RemoteException, MalformedURLException{
         serverRMIService = new ServerRMIImplementation(db);
         // Esportazione dell'Oggetto 

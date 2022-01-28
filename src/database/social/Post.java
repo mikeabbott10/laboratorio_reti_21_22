@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @JsonFilter("postFilter") // ignore some field serializing with this filter name
-public class Post implements Comparable<Post> {
+public class Post implements java.io.Serializable, Comparable<Post> {
     private long id;
     private String title;
     private String content;
@@ -73,7 +73,8 @@ public class Post implements Comparable<Post> {
 
     public void addDownVote(String username) throws ForbiddenActionException {
         if(!upvotes.contains(username)){
-            throw new ForbiddenActionException("Vote already inserted");
+            if(!downvotes.add(username))
+                throw new ForbiddenActionException("Vote already inserted");
         }else
             throw new ForbiddenActionException("Vote already inserted");
     }

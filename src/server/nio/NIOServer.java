@@ -2,6 +2,7 @@ package server.nio;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ProtocolException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Pipe;
@@ -9,23 +10,25 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import database.Database;
+import exceptions.DatabaseException;
 import exceptions.EndOfStreamException;
 import server.ServerMain;
-import server.util.Logger;
+import server.http.handler.HttpRequestHandler;
+import server.http.response.HttpResponse;
+import server.http.response.HttpResponseBuilder;
 
-public class NIOServer {
-    private static final Logger LOGGER = new Logger(NIOServer.class.getName());
-    
+public class NIOServer {    
     private final int port;
     public final int BUF_SIZE = 8192;
 
@@ -34,9 +37,8 @@ public class NIOServer {
     private Database db;
 
     private final int workersAmount = 4;
-    private ArrayList<Thread> workers;
+    private ThreadPoolExecutor workersPool;
 
-    protected LinkedBlockingQueue<CustomRequest> requestList;
     protected ConcurrentLinkedQueue<RegistrationParameters> pendingRegistrations;
     protected ConcurrentHashMap<SocketChannel, ChannelData> channelToDataMap;
 
@@ -45,9 +47,7 @@ public class NIOServer {
     public NIOServer(int port, Database db) {
         this.port = port;
         this.db = db;
-        this.requestList = new LinkedBlockingQueue<>();
         this.pendingRegistrations = new ConcurrentLinkedQueue<>();
-        this.workers = new ArrayList<>(workersAmount);
         this.channelToDataMap = new ConcurrentHashMap<>();
     }
 
@@ -58,9 +58,11 @@ public class NIOServer {
         return registrationPipe;
     }
 
-
+    /**
+     * Start selector cycle
+     */
     public void start(){
-        startWorkers();
+        workersPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(workersAmount);
         try( 
             ServerSocketChannel serverChannel = ServerSocketChannel.open() 
         ){
@@ -72,6 +74,7 @@ public class NIOServer {
 
             registrationPipe = Pipe.open();
             registrationPipe.source().configureBlocking(false);
+            // add the pipe channel to the selector (OP_READ operation is registered)
             registrationPipe.source().register(selector, SelectionKey.OP_READ);
 
             while (!ServerMain.quit) {
@@ -79,7 +82,7 @@ public class NIOServer {
                     continue;
                 Set<SelectionKey> readyKeys = selector.selectedKeys(); // set of ready channel keys 
                 Iterator <SelectionKey> iterator = readyKeys.iterator();
-                
+
                 while (iterator.hasNext()) {
                     SelectionKey key = iterator.next();
                     iterator.remove();
@@ -96,7 +99,7 @@ public class NIOServer {
                             SocketChannel client = server.accept(); // non blocking!
                             client.configureBlocking(false);
     
-                            // register the client SocketChannel to the selector with a
+                            // register the SocketChannel to the selector with a
                             // focus on the read operation (we want to read something now) 
                             registerOp(selector, client, SelectionKey.OP_READ, null);
                         }
@@ -106,15 +109,25 @@ public class NIOServer {
                             readClientMessage(selector, key);
                         }
                     }catch (IOException ex) { // client suddenly closed
-                        ex.printStackTrace();
+                        //ex.printStackTrace();
                         cancelKeyAndCloseChannel(key);
                     }
                 }
             }
+
+            // close pipe channels
+            registrationPipe.source().close();
+            registrationPipe.sink().close();
         }catch (IOException ex) {
             ex.printStackTrace();
         }
-        joinWorkers();
+
+        try {
+            workersPool.shutdown();
+            workersPool.awaitTermination(4, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        };
 
         synchronized(this){
             end = true;
@@ -139,7 +152,8 @@ public class NIOServer {
                 ChannelData prevData = channelToDataMap.get(clientChannel);
                 if(prevData!=null){
                     channelToDataMap.remove(clientChannel);
-                    requestList.add(new CustomRequest(sel, clientChannel, prevData.getMessage() + raw, key));
+                    this.workersPool.execute( this.requestHandlerTask(new CustomRequest(sel, clientChannel, prevData.getMessage() + raw, key)) );
+                    //requestList.add(new CustomRequest(clientChannel, prevData.getMessage() + raw, key));
                 }else{
                     // never here
                     assert true == false;
@@ -147,14 +161,16 @@ public class NIOServer {
             }else if(contentLength == -1){
                 // it's an http request containing no body (it contains method, path, http version and headers)
                 channelToDataMap.remove(clientChannel);
-                requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+                this.workersPool.execute( this.requestHandlerTask(new CustomRequest(sel, clientChannel, raw, key)) );
+                //requestList.add(new CustomRequest(clientChannel, raw, key));
             }else{
-                //System.out.println("NIOServer.readClientMessage - contentLength:  "+contentLength);
+                // System.out.println("NIOServer.readClientMessage - contentLength:  "+contentLength);
                 // it's an http request which should contain body
                 if(containsBody(raw, contentLength)){
                     //System.out.println("contiene body");
                     channelToDataMap.remove(clientChannel);
-                    requestList.add(new CustomRequest(sel, clientChannel, raw, key));
+                    this.workersPool.execute( this.requestHandlerTask(new CustomRequest(sel, clientChannel, raw, key)) );
+                    //requestList.add(new CustomRequest(clientChannel, raw, key));
                 }else{
                     //System.out.println("NON contiene body");
                     ChannelData cd = new ChannelData();
@@ -167,25 +183,20 @@ public class NIOServer {
 
             }
         }catch(EndOfStreamException e){
-            //LOGGER.info(e.getMessage() +": "+ key.channel());
+            //System.out.println(e.getMessage() +": "+ key.channel());
             cancelKeyAndCloseChannel(key);
         } catch (IOException e) {
-            //LOGGER.warn(e.getMessage());
+            //System.out.println(e.getMessage());
             cancelKeyAndCloseChannel(key);
         }
-        /*SocketChannel clientChannel = (SocketChannel) key.channel();
-        try{
-            String raw = new RawRequestReader().readRaw(clientChannel);
-            requestList.add(new CustomRequest(sel, clientChannel, raw, key));
-        }catch(EndOfStreamException e){
-            //LOGGER.info(e.getMessage() +": "+ key.channel());
-            cancelKeyAndCloseChannel(key);
-        } catch (IOException e) {
-            //LOGGER.warn(e.getMessage());
-            cancelKeyAndCloseChannel(key);
-        }*/
     }
 
+    /**
+     * Check if http request raw contains body
+     * @param raw
+     * @param contentLength
+     * @return
+     */
     private boolean containsBody(String raw, int contentLength) {
         final String eol = "\r\n\r\n" ;
         try {
@@ -200,6 +211,11 @@ public class NIOServer {
         return false;
     }
 
+    /**
+     * check if http request raw contains Content-Length header > 0
+     * @param raw
+     * @return
+     */
     private int containsContentLength(String raw) {
         //System.out.println("NIOServer.containsContentLength - request: "+raw);
         try {
@@ -237,7 +253,7 @@ public class NIOServer {
         SocketChannel client_channel = (SocketChannel) key.channel();
         ByteBuffer BBAnswer = (ByteBuffer) key.attachment();
         client_channel.write(BBAnswer);
-        //LOGGER.info("Scritto al client");
+        //System.out.println("Scritto al client");
         if (!BBAnswer.hasRemaining()) {
             BBAnswer.clear();
             registerOp(sel, client_channel, SelectionKey.OP_READ, null);
@@ -276,24 +292,44 @@ public class NIOServer {
             key.cancel();
             key.channel().close();
         }catch(Exception ignored){}
-        //LOGGER.info("chiuso");
+        //System.out.println("chiuso");
     }
 
-    private void startWorkers(){
-        for (int i = 0; i < workersAmount; i++) {
-			Thread t = new Thread(new NIOWorker(this, requestList, this.db));
-			workers.add(t);
-			t.start();
-		}
+    private Runnable requestHandlerTask(CustomRequest req){
+        return() -> {
+            try {
+                //System.out.println(Thread.currentThread().getName());
+                HttpResponse response = null;
+                try {
+                    response = new HttpRequestHandler().handleRequest(this.db, req);
+                } catch (JsonProcessingException | ProtocolException e) {
+                    e.printStackTrace();
+                    return;
+                }
+                if(response == null) return;
+                // answer to client
+                HttpResponseBuilder rb = new HttpResponseBuilder();
+                ByteBuffer headers = ByteBuffer.wrap(rb.buildHeaders(response));
+                ByteBuffer content = rb.buildContent(response);
+                //headers.flip(); content.flip(); flip errati qua perchè ByteBuffer.wrap lascia position a 0
+                ByteBuffer bb = ByteBuffer.allocate(headers.capacity() + content.capacity());
+                bb.put(headers).put(content);
+                bb.flip();
+                
+                // tell selector thread to register a write operation for channel
+                this.pendingRegistrations.add(
+                    new RegistrationParameters(req.getSelector(), req.getClient_channel(), SelectionKey.OP_WRITE, bb)
+                );
+                var junk = ByteBuffer.allocateDirect(1);
+                while(this.getRegistrationPipe().sink().write(junk)==0);
+                
+            } catch (IOException e) {
+                // GRAVE: registration pipe issue
+                e.printStackTrace();
+            }catch (DatabaseException e) {
+                // GRAVE
+                System.out.println("Warn: "+e.getMessage());
+            }
+        };
     }
-    private void joinWorkers() {
-        for (int i = 0; i < workersAmount; i++){
-			try {
-				workers.get(i).join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			};
-		}
-    }
-
 }

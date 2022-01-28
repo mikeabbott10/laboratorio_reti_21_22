@@ -26,12 +26,27 @@ public class JacksonUtil {
         return objectMapper.writer(filters).writeValueAsString(obj);
     }
 
+    /**
+     * Get a string representation of obj
+     * @param obj
+     * @return
+     * @throws JsonMappingException
+     * @throws JsonProcessingException
+     */
     public static String getStringFromObject(Object obj) 
             throws JsonMappingException, JsonProcessingException {
         var objectMapper = new ObjectMapper();
         return objectMapper.writeValueAsString(obj);
     }
 
+    /**
+     * Get object from a string representation
+     * @param string
+     * @param clas
+     * @return
+     * @throws JsonMappingException
+     * @throws JsonProcessingException
+     */
     public static Object getObjectFromString(String string, Class<?> clas) 
             throws JsonMappingException, JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();

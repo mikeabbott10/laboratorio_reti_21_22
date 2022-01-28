@@ -11,7 +11,7 @@ import database.Database;
 import lombok.Data;
 
 @JsonFilter("socialFilter") // ignore some field serializing with this filter name
-public @Data class SocialService implements java.io.Serializable{
+public @Data class SocialService{
     private ConcurrentHashMap<String, User> users; // users in the social network
 
     // synchronized structure bc threads can remove posts

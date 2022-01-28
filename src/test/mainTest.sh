@@ -1,8 +1,7 @@
 #!/bin/bash
-#TEST3 (aka stress test)
 BWHT="\033[1;37m"
 REG=$(tput sgr0)
-TIMER=600
+TIMER=120
 LIB=../../lib/*:../
 export BWHT
 
@@ -36,12 +35,9 @@ sleep ${TIMER}
 echo -e $BWHT "
     KILLING CLIENTS
 " $REG
-# killall -9 spawnWinsomeClients.sh > /dev/null 2>/dev/null
+
 killall -9 spawnWinsomeClients.sh | at now &> /dev/null
-#kill -15 $S_PID
-# -9 == SIGKILL
-# -2 == SIGINT
-# -15 == SIGTERM
+
 duration=$(( SECONDS - start ))
 
 sleep 2

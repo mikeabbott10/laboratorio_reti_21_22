@@ -1,11 +1,5 @@
-package server.multicast;
+package cloudfunctions;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,68 +14,15 @@ import database.social.Post;
 import database.social.User;
 import exceptions.ResourceNotFoundException;
 import server.ServerMain;
-import server.nio.NIOServer;
-import server.util.Logger;
 
-public class RewardDaemon implements Runnable{
-    private Logger LOGGER = new Logger(RewardDaemon.class.getName());
-    private Database db;
-    private NIOServer nio;
-
-    public RewardDaemon(NIOServer nio, Database db){
-        this.nio= nio;
-        this.db = db;
-    }
-
-
-    @Override
-    public void run() {
-        try (DatagramSocket skt = new DatagramSocket(ServerMain.server_config.MULTICAST_PORT +1 )) {
-            while (!Thread.currentThread().isInterrupted() && !ServerMain.quit ) {
-                byte[] msg = "Rewards calculated".getBytes();
-                try {
-                    DatagramPacket datagram = new DatagramPacket(msg, msg.length,
-                        InetAddress.getByName(ServerMain.server_config.MULTICAST_ADDRESS),
-                        ServerMain.server_config.MULTICAST_PORT);
-                    skt.send(datagram);
-                } catch (UnknownHostException | SocketException e) {
-                    // packet or socket error
-                    e.printStackTrace();
-                } catch (IOException ex) {
-                    // comunication error
-                    ex.printStackTrace();
-                }
-                rewardCalculator();
-                try {
-                    Thread.sleep(ServerMain.server_config.REWARD_TIMEOUT);
-                } catch (InterruptedException ignored){}
-            }
-
-            // wait until nio workers end
-            synchronized (nio){
-                while (!nio.end) {
-                    try {
-                        nio.wait();
-                    }catch (InterruptedException ex){
-                        ex.printStackTrace();
-                    }
-                }
-            }
-            //LOGGER.info("Performing last reward calculation");
-            rewardCalculator(); // once more after all stopped
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        return;
-    }
-
+public class RewardCalculator {
     /**
      * Calculate user rewards, using 3 maps of new post iterations since the last 
      * run of the calculator.
      * 
      * post.postAge = rewardLifeIterations (now) - rewardLifeIterations at post creation
      */
-    public void rewardCalculator() {
+    public static void calculate(Database db) {
         int rewardLifeIterations = db.updateRewardIterations();
 
         ConcurrentHashMap<Integer, KeySetView<String, Boolean>> newUpvotes;
@@ -144,9 +85,9 @@ public class RewardDaemon implements Runnable{
                 // author reward
                 if (users.containsKey(post.getAuthor())) {
                     try {
-                        db.updateUserWallet(post.getAuthor(), reward*ServerMain.server_config.AUTHOR_PERCENTAGE);
+                        db.updateUserWallet(post.getAuthor(), reward*ServerMain.server_config.AUTHOR_PERCENTAGE); // simplified
                     } catch (ResourceNotFoundException e) {
-                        // LOGGER.info(e.getMessage());
+                        // System.out.println(e.getMessage());
                         // e.printStackTrace();
                     }
                 }
@@ -165,7 +106,7 @@ public class RewardDaemon implements Runnable{
                     try {
                         db.updateUserWallet(username, reward / curators.size() * (1 - ServerMain.server_config.AUTHOR_PERCENTAGE));
                     } catch (ResourceNotFoundException e) {
-                        // LOGGER.info(e.getMessage());
+                        // System.out.println(e.getMessage());
                         // e.printStackTrace();
                     }
                 });
@@ -177,5 +118,4 @@ public class RewardDaemon implements Runnable{
             db.removeIdFromNewComments(id);
         }
     }
-    
 }

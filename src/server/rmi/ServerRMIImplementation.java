@@ -47,7 +47,7 @@ public class ServerRMIImplementation extends RemoteServer implements ServerRMIIn
             throw new InvalidUsername("This name already exists.");
 
         //System.out.println("New User registered: " + username + " " + password + " " + tags);
-        return "User "+ username + "registered.";
+        return "User "+ username + " registered.";
     }
 
     /** 
